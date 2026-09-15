@@ -42,6 +42,7 @@ export class NaiveRenderer extends renderer.Renderer {
                     binding: 0,
                     resource: { buffer: this.camera.uniformsBuffer }
                 },
+                //for naive renderer, we only need lights and camera
                 {
                     binding: 1,
                     resource: { buffer: this.lights.lightSetStorageBuffer }
@@ -51,8 +52,11 @@ export class NaiveRenderer extends renderer.Renderer {
 
         this.depthTexture = renderer.device.createTexture({
             size: [renderer.canvas.width, renderer.canvas.height],
-            format: "depth24plus",
+            format: "depth24plus",//at least 24 bits floating point depth accuracy,
+            //plus:if supported for this graphic card, use 32 bits
             usage: GPUTextureUsage.RENDER_ATTACHMENT
+            //RENDER_ATTACHMENT: this texture can be used as a render target, 
+            //for example，color output target or depth test output buffer.
         });
         this.depthTextureView = this.depthTexture.createView();
 
@@ -66,8 +70,8 @@ export class NaiveRenderer extends renderer.Renderer {
                 ]
             }),
             depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: "less",
+                depthWriteEnabled: true,//write new Z value to depth buffer after depth test pass
+                depthCompare: "less",//closer ones win
                 format: "depth24plus"
             },
             vertex: {
@@ -93,21 +97,24 @@ export class NaiveRenderer extends renderer.Renderer {
 
     override draw() {
         const encoder = renderer.device.createCommandEncoder();
+        //createView()：what's inside a 3d texutre is complex,cube map layers,8 layers of mipmap，etc.
+        //this func defaults the format,layer,level
         const canvasTextureView = renderer.context.getCurrentTexture().createView();
 
         const renderPass = encoder.beginRenderPass({
+            //tile memory/On-Chip SRAM
             label: "naive render pass",
             colorAttachments: [
                 {
                     view: canvasTextureView,
                     clearValue: [0, 0, 0, 0],
-                    loadOp: "clear",
-                    storeOp: "store"
+                    loadOp: "clear",//clear the canvas texture before render pass
+                    storeOp: "store"//write the result to the canvas texture after render pass
                 }
             ],
             depthStencilAttachment: {
                 view: this.depthTextureView,
-                depthClearValue: 1.0,
+                depthClearValue: 1.0,//1.0: farthest depth value at initialization
                 depthLoadOp: "clear",
                 depthStoreOp: "store"
             }

@@ -24,9 +24,9 @@ import clusteringComputeRaw from './clustering.cs.wgsl?raw';
 // Note that these are declared in a somewhat roundabout way because otherwise minification will drop variables
 // that are unused in host side code.
 export const constants = {
-    bindGroup_scene: 0,
-    bindGroup_model: 1,
-    bindGroup_material: 2,
+    bindGroup_scene: 0,//camera projection matrix and lightSet buffer（once per frame）
+    bindGroup_model: 1,//local translation, rotation matrix（once per switching 3d point）
+    bindGroup_material: 2,//diffuse texuture and roughness texture（once per switching material）
 
     moveLightsWorkgroupSize: 128,
 
