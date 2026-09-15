@@ -1,66 +1,49 @@
 # CLAUDE.md
 
-## Read first
-
-Read `AGENTS.md` and `INSTRUCTIONS.md` before editing. This is CIS 565 Project
-4, not a generic WebGPU sample: implementation and write-up requirements are
-both graded, and third-party core rendering code is prohibited without course
-approval.
-
-## Fast orientation
+## Orientation
 
 ```text
 main.ts
   -> initWebGPU / load Sponza / create Camera + Lights + Stage
-  -> select NaiveRenderer | ForwardPlusRenderer | ClusteredDeferredRenderer
+  -> NaiveRenderer | ForwardPlusRenderer | ClusteredDeferredRenderer
+
 Renderer frame loop
   -> camera.onFrame(delta)
-  -> lights.onFrame(time)       # light animation compute encoder
-  -> selectedRenderer.draw()    # clustering + graphics work, as applicable
+  -> lights.onFrame(time)
+  -> selectedRenderer.draw()
 ```
 
-The renderer's shared bind groups use the fixed indices defined in
-`src/shaders/shaders.ts`: scene 0, model 1, material 2.
+The advanced renderers use the same clustering entry point:
+`lights.doLightClustering(encoder)`.
 
-## Work plan
+## Key files
 
-1. Establish a working Naive baseline before implementing a clustered path.
-2. Make one shared cluster data contract across `lights.ts`, `camera.ts`,
-   `clustering.cs.wgsl`, and the Forward+/deferred shaders.
-3. Have both advanced renderers invoke `lights.doLightClustering(encoder)`.
-4. Make Forward+ correct before building the deferred G-buffer/fullscreen
-   composition.
-5. Measure first; optimize second. Keep records for the README as you work.
-
-## Important files
-
-| Area | Host code | Shader code |
+| Area | TypeScript | WGSL |
 | --- | --- | --- |
-| Camera uniform(s) | `src/stage/camera.ts` | `src/shaders/common.wgsl`, vertex shaders |
-| Light animation | `src/stage/lights.ts` | `src/shaders/move_lights.cs.wgsl` |
+| Camera data | `src/stage/camera.ts` | `src/shaders/common.wgsl`, vertex shaders |
+| Animated lights | `src/stage/lights.ts` | `src/shaders/move_lights.cs.wgsl` |
 | Clustering | `src/stage/lights.ts` | `src/shaders/clustering.cs.wgsl` |
-| Naive baseline | `src/renderers/naive.ts` | `naive.vs.wgsl`, `naive.fs.wgsl` |
+| Naive renderer | `src/renderers/naive.ts` | `naive.vs.wgsl`, `naive.fs.wgsl` |
 | Forward+ | `src/renderers/forward_plus.ts` | `forward_plus.fs.wgsl` |
 | Deferred | `src/renderers/clustered_deferred.ts` | `clustered_deferred*.wgsl` |
 
-## Non-negotiable checks
+## Working sequence
 
-- Any WGSL struct/binding change requires the matching TypeScript buffer,
-  bind-group layout, bind group, and pipeline layout change in the same edit.
-- Respect WGSL uniform/storage alignment and padding. `vec3f` is 16-byte
-  aligned; do not treat it as a tightly packed three-float array.
-- Compute shaders need bounds checks. Cluster list writes need counter reset
-  and capacity checks.
-- Run `npm run build` after edits. Then launch `npm run dev` in Chrome with
-  WebGPU enabled and inspect console validation errors; build success alone is
-  insufficient.
-- Validate visual parity across renderer modes and performance with stable,
-  documented conditions. Use milliseconds in the report.
+1. Use Naive as the visual baseline.
+2. Define shared camera and cluster data once, then mirror it in TypeScript and
+   WGSL.
+3. Implement the clustering compute pass and call it from Forward+.
+4. Add the deferred G-buffer and fullscreen lighting pass using the same
+   cluster data.
+5. Use `npm run build` for a quick static check and `npm run dev` plus Chrome
+   DevTools for runtime validation.
 
-## Do not do
+## WebGPU reminders
 
-- Do not change `scenes/sponza` or generated `dist/` for renderer work.
-- Do not fabricate README screenshots, video, deployment URL, or measurements.
-- Do not use a fullscreen render pass when claiming the compute-pass-only
-  post-processing extra credit.
-- Do not discard user changes or rewrite unrelated files.
+- Bind groups: scene `0`, model `1`, material `2`.
+- `vec3f` is 16-byte aligned. Match host buffer offsets and WGSL struct layout.
+- `common.wgsl` is prepended to each shader by `shaders.ts`.
+- Compute work uses ceiling dispatch counts and bounds checks.
+- G-buffer textures need render-attachment usage for writing and texture
+  binding usage for the fullscreen readback path.
+- Use milliseconds when recording performance comparisons.
