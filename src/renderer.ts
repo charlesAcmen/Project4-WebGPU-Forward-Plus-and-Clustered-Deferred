@@ -17,6 +17,7 @@ export var materialBindGroupLayout: GPUBindGroupLayout;
 
 // CHECKITOUT: this function initializes WebGPU and also creates some bind group layouts shared by all the renderers
 export async function initWebGPU() {
+    //as:type assertion
     canvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
 
     const devicePixelRatio = window.devicePixelRatio;
@@ -71,7 +72,7 @@ export async function initWebGPU() {
                 visibility: GPUShaderStage.FRAGMENT,
                 texture: {}
             },
-            { // diffuseTexSampler
+            { // diffuseTexSampler:nearest filtering,linear filtering,repeat,clamp etc
                 binding: 1,
                 visibility: GPUShaderStage.FRAGMENT,
                 sampler: {}
@@ -86,17 +87,17 @@ export const vertexBufferLayout: GPUVertexBufferLayout = {
         { // pos
             format: "float32x3",
             offset: 0,
-            shaderLocation: 0
+            shaderLocation: 0//@location(0) position: vec3<f32>;
         },
         { // nor
             format: "float32x3",
             offset: 12,
-            shaderLocation: 1
+            shaderLocation: 1//@location(1) normal: vec3<f32>;
         },
         { // uv
             format: "float32x2",
             offset: 24,
-            shaderLocation: 2
+            shaderLocation: 2//@location(2) uv: vec2<f32>;
         }
     ]
 };
