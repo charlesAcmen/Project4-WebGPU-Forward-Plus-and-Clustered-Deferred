@@ -131,6 +131,12 @@ export class Lights {
     doLightClustering(encoder: GPUCommandEncoder) {
         // TODO-2: run the light clustering compute pass(es) here
         // implementing clustering here allows for reusing the code in both Forward+ and Clustered Deferred
+        const computePass = encoder.beginComputePass({ label: "light clustering compute pass" });
+        computePass.setPipeline(this.lightClusteringComputePipeline);
+        computePass.setBindGroup(0, this.lightClusteringBindGroup);
+        const workgroupCount = Math.ceil(this.clusters.dimensions.clusterCount / shaders.constants.clusteringWorkgroupSize);
+        computePass.dispatchWorkgroups(workgroupCount);
+        computePass.end();
     }
 
     // CHECKITOUT: this is where the light movement compute shader is dispatched from the host
