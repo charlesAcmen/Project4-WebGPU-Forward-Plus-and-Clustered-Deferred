@@ -32,7 +32,10 @@ export const constants = {
     moveLightsWorkgroupSize: 128,
     clusteringWorkgroupSize: 64,
 
-    lightRadius: 2
+    lightRadius: 2,
+    clusterTileSizePixels: defaultClusterGridConfig.tileSizePixels,
+    clusterDepthSliceCount: defaultClusterGridConfig.depthSliceCount,
+    maxLightsPerCluster: defaultClusterGridConfig.maxLightsPerCluster,
 };
 
 // =================================
