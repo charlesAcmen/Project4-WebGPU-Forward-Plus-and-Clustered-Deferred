@@ -10,9 +10,9 @@ import {
 //CPU side representation of the camera uniforms
 class CameraUniforms {
     //readonly:can not be modified after initialization
-    readonly buffer = new ArrayBuffer(16 * 4);
+    readonly buffer = createCameraUniformData();
     //reinterpret the buffer as a Float32Array
-    private readonly floatView = new Float32Array(this.buffer);
+    private readonly floatView = this.buffer;
 
     //setter:automatically called when the property is assigned a value
     set viewProjMat(mat: Float32Array) {
