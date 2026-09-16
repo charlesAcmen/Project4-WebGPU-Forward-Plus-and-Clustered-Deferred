@@ -111,6 +111,71 @@ export class Lights {
         });
 
         // TODO-2: initialize layouts, pipelines, textures, etc. needed for light clustering here
+        this.lightClusteringBindGroupLayout = device.createBindGroupLayout({
+            label: "light clustering bind group layout",
+            entries: [
+                {
+                    //0： camera uniform buffer
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    //constant cache,broadcast to all across the workgroups（warp）
+                    buffer: { type: "uniform" },
+                },
+                {
+                    //1： light set storage buffer
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    //shader will not modify pos+color+radius
+                    //avoiding write-back and cache invalidation
+                    buffer: { type: "read-only-storage" },
+                },
+                {
+                    //2： clusters metadata storage buffer
+                    binding: 2,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" },
+                },
+                {
+                    //3： clusters light index storage buffer
+                    binding: 3,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" },
+                },
+                {
+                    //4： clusters overflow storage buffer
+                    binding: 4,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" },
+                },
+            ],
+        });
+
+        this.lightClusteringBindGroup = device.createBindGroup({
+            label: "light clustering bind group",
+            layout: this.lightClusteringBindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: this.camera.uniformsBuffer } },
+                { binding: 1, resource: { buffer: this.lightSetStorageBuffer } },
+                { binding: 2, resource: { buffer: this.clusters.metadataStorageBuffer } },
+                { binding: 3, resource: { buffer: this.clusters.lightIndexStorageBuffer } },
+                { binding: 4, resource: { buffer: this.clusters.overflowStorageBuffer } },
+            ],
+        });
+
+        this.lightClusteringComputePipeline = device.createComputePipeline({
+            label: "light clustering compute pipeline",
+            layout: device.createPipelineLayout({
+                label: "light clustering compute pipeline layout",
+                bindGroupLayouts: [this.lightClusteringBindGroupLayout],
+            }),
+            compute: {
+                module: device.createShaderModule({
+                    label: "light clustering compute shader",
+                    code: shaders.clusteringComputeSrc,
+                }),
+                entryPoint: "main",
+            },
+        });
     }
 
     private populateLightsBuffer() {
