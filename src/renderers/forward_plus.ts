@@ -2,6 +2,18 @@ import * as renderer from '../renderer';
 import * as shaders from '../shaders/shaders';
 import { Stage } from '../stage/stage';
 
+/**
+ * Forward+ owns render-path objects only. Shared camera, lights, and future
+ * cluster-list buffers remain in stage so deferred rendering can reuse them.
+ */
+export interface ForwardPlusResources {
+    //unique to forward+ renderer
+    sceneUniformsBindGroupLayout: GPUBindGroupLayout;
+    sceneUniformsBindGroup: GPUBindGroup;
+    renderPipeline: GPURenderPipeline;
+    depthTextureView: GPUTextureView;
+}
+
 export class ForwardPlusRenderer extends renderer.Renderer {
     // TODO-2: add layouts, pipelines, textures, etc. needed for Forward+ here
     // you may need extra uniforms such as the camera view matrix and the canvas resolution
