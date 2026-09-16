@@ -40,6 +40,10 @@ export class Lights {
     moveLightsComputeBindGroup: GPUBindGroup;
     moveLightsComputePipeline: GPUComputePipeline;
 
+    lightClusteringBindGroupLayout: GPUBindGroupLayout;
+    lightClusteringBindGroup: GPUBindGroup;
+    lightClusteringComputePipeline: GPUComputePipeline;
+
     // TODO-2: add layouts, pipelines, textures, etc. needed for light clustering here
 
     constructor(camera: Camera, clusters: Clusters) {
