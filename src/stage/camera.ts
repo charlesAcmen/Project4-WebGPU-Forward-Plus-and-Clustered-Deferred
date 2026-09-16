@@ -25,6 +25,24 @@ class CameraUniforms {
     }
 
     // TODO-2: add extra functions to set values needed for light clustering here
+    setClusteringParams(
+        nearPlane: number,
+        farPlane: number,
+        tanHalfFovY: number,
+        aspectRatio: number,
+        viewportWidth: number,
+        viewportHeight: number,
+    ): void {
+        writeCameraClusteringParams(
+            this.floatView,
+            nearPlane,
+            farPlane,
+            tanHalfFovY,
+            aspectRatio,
+            viewportWidth,
+            viewportHeight,
+        );
+    }
 }
 
 export class Camera {
