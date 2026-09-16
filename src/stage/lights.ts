@@ -26,11 +26,12 @@ export class Lights {
 
     numLights = 500;
     static readonly maxNumLights = 5000;
-    static readonly numFloatsPerLight = 8; // vec3f is aligned at 16 byte boundaries
+    static readonly numFloatsPerLight = LightGpuLayout.float32sPerLight; // vec3f is aligned at 16 byte boundaries
 
     static readonly lightIntensity = 0.1;
 
-    lightsArray = new Float32Array(Lights.maxNumLights * Lights.numFloatsPerLight);
+    lightsArray = createLightRecordData(Lights.maxNumLights);
+    private readonly lightSetHeader = createLightSetHeader();
     lightSetStorageBuffer: GPUBuffer;
 
     timeUniformBuffer: GPUBuffer;
@@ -47,7 +48,7 @@ export class Lights {
 
         this.lightSetStorageBuffer = device.createBuffer({
             label: "lights",
-            size: 16 + this.lightsArray.byteLength, // 16 for numLights + padding
+            size: getLightSetByteSize(Lights.maxNumLights),
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
         this.populateLightsBuffer();
@@ -112,14 +113,15 @@ export class Lights {
         for (let lightIdx = 0; lightIdx < Lights.maxNumLights; ++lightIdx) {
             // light pos is set by compute shader so no need to set it here
             const lightColor = vec3.scale(hueToRgb(Math.random()), Lights.lightIntensity);
-            this.lightsArray.set(lightColor, (lightIdx * Lights.numFloatsPerLight) + 4);
+            writeLightColor(this.lightsArray, lightIdx, lightColor);
         }
 
-        device.queue.writeBuffer(this.lightSetStorageBuffer, 16, this.lightsArray);
+        device.queue.writeBuffer(this.lightSetStorageBuffer, LightSetGpuLayout.lightsByteOffset, this.lightsArray.buffer as ArrayBuffer);
     }
 
     updateLightSetUniformNumLights() {
-        device.queue.writeBuffer(this.lightSetStorageBuffer, 0, new Uint32Array([this.numLights]));
+        writeLightSetNumLights(this.lightSetHeader, this.numLights);
+        device.queue.writeBuffer(this.lightSetStorageBuffer, LightSetGpuLayout.numLightsOffset, this.lightSetHeader.buffer as ArrayBuffer);
     }
 
     doLightClustering(encoder: GPUCommandEncoder) {
