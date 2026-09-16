@@ -1,11 +1,13 @@
 // CHECKITOUT: code that you add here will be prepended to all shaders
 
 struct Light {
+    // Mirrors LightGpuLayout: each vec3f occupies a 16-byte storage slot.
     pos: vec3f,
     color: vec3f
 }
 
 struct LightSet {
+    // Mirrors LightSetGpuLayout: the runtime array starts at byte offset 16.
     numLights: u32,
     lights: array<Light>
 }
@@ -14,8 +16,7 @@ struct LightSet {
 
 struct CameraUniforms {
     // TODO-1.3: add an entry for the view proj mat (of type mat4x4f)
-    // Keep this field first: the TypeScript host
-    // buffer contains exactly one mat4x4f (64 bytes).
+    // Mirrors CameraGpuLayout: this uniform buffer contains one 64-byte mat4x4f.
     viewProjMat: mat4x4f,
 }
 
