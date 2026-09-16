@@ -3,6 +3,16 @@ import { device } from "../renderer";
 
 import * as shaders from '../shaders/shaders';
 import { Camera } from "./camera";
+import { Clusters } from "./clusters";
+import {
+    createLightRecordData,
+    createLightSetHeader,
+    getLightSetByteSize,
+    LightGpuLayout,
+    LightSetGpuLayout,
+    writeLightColor,
+    writeLightSetNumLights,
+} from "./gpu_layouts";
 
 // h in [0, 1]
 function hueToRgb(h: number) {
@@ -12,6 +22,7 @@ function hueToRgb(h: number) {
 
 export class Lights {
     private camera: Camera;
+    private clusters: Clusters;
 
     numLights = 500;
     static readonly maxNumLights = 5000;
@@ -30,8 +41,9 @@ export class Lights {
 
     // TODO-2: add layouts, pipelines, textures, etc. needed for light clustering here
 
-    constructor(camera: Camera) {
+    constructor(camera: Camera, clusters: Clusters) {
         this.camera = camera;
+        this.clusters = clusters;
 
         this.lightSetStorageBuffer = device.createBuffer({
             label: "lights",
