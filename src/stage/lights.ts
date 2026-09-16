@@ -169,10 +169,12 @@ export class Lights {
                 bindGroupLayouts: [this.lightClusteringBindGroupLayout],
             }),
             compute: {
+                //Chromium tint will transpile the WGSL to SPIR-V and then back to WGSL
                 module: device.createShaderModule({
                     label: "light clustering compute shader",
                     code: shaders.clusteringComputeSrc,
                 }),
+                //@compute entrypoint function named main in WGSL shader code
                 entryPoint: "main",
             },
         });
