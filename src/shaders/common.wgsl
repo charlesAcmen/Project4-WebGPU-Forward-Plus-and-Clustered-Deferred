@@ -14,10 +14,21 @@ struct LightSet {
 
 // TODO-2: you may want to create a ClusterSet struct similar to LightSet
 
+struct ClusterMetadata {
+    // Mirrors ClusterMetadataGpuLayout: a fixed index-list offset and live count.
+    lightIndexOffset: u32,
+    lightCount: u32,
+}
+
 struct CameraUniforms {
     // TODO-1.3: add an entry for the view proj mat (of type mat4x4f)
-    // Mirrors CameraGpuLayout: this uniform buffer contains one 64-byte mat4x4f.
+    // Mirrors CameraGpuLayout: matrices are followed by two vec4f clustering parameter blocks.
     viewProjMat: mat4x4f,
+    viewMat: mat4x4f,
+    // near plane, far plane, tan(fovY / 2), aspect ratio
+    projectionParams: vec4f,
+    // viewport width, viewport height, reciprocal width, reciprocal height
+    viewport: vec4f,
 }
 
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius
