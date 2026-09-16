@@ -176,6 +176,15 @@ export class Camera {
         this.uniforms.viewProjMat = viewProjMat;
 
         // TODO-2: write to extra buffers needed for light clustering here
+        this.uniforms.viewMat = viewMat;
+        this.uniforms.setClusteringParams(
+            Camera.nearPlane,
+            Camera.farPlane,
+            Math.tan(toRadians(fovYDegrees) * 0.5),
+            aspectRatio,
+            canvas.width,
+            canvas.height,
+        );
 
         // TODO-1.1: upload `this.uniforms.buffer` (host side) to `this.uniformsBuffer` (device side)
         // check `lights.ts` for examples of using `device.queue.writeBuffer()`
