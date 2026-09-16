@@ -111,7 +111,39 @@ export class ForwardPlusRenderer extends renderer.Renderer {
 
     override draw() {
         // TODO-2: run the Forward+ rendering pass:
+        const encoder = renderer.device.createCommandEncoder({ label: "Forward+ command encoder" });
         // - run the clustering compute shader
+        this.lights.doLightClustering(encoder);
+
+        const canvasTextureView = renderer.context.getCurrentTexture().createView();
+        const renderPass = encoder.beginRenderPass({
+            label: "Forward+ render pass",
+            colorAttachments: [{
+                view: canvasTextureView,
+                clearValue: [0, 0, 0, 0],
+                loadOp: "clear",
+                storeOp: "store",
+            }],
+            depthStencilAttachment: {
+                view: this.resources.depthTextureView,
+                depthClearValue: 1.0,
+                depthLoadOp: "clear",
+                depthStoreOp: "store",
+            },
+        });
+        renderPass.setPipeline(this.resources.renderPipeline);
+        renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.resources.sceneUniformsBindGroup);
+        this.scene.iterate(node => {
+            renderPass.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
+        }, material => {
+            renderPass.setBindGroup(shaders.constants.bindGroup_material, material.materialBindGroup);
+        }, primitive => {
+            renderPass.setVertexBuffer(0, primitive.vertexBuffer);
+            renderPass.setIndexBuffer(primitive.indexBuffer, "uint32");
+            renderPass.drawIndexed(primitive.numIndices);
+        });
+        renderPass.end();
         // - run the main rendering pass, using the computed clusters for efficient lighting
+        renderer.device.queue.submit([encoder.finish()]);
     }
 }
