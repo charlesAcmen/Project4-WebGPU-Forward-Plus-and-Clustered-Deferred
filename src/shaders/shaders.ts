@@ -1,6 +1,7 @@
 // CHECKITOUT: this file loads all the shaders and preprocesses them with some common code
 
 import { Camera } from '../stage/camera';
+import { defaultClusterGridConfig } from '../stage/cluster_config';
 
 import commonRaw from './common.wgsl?raw';
 
@@ -29,6 +30,7 @@ export const constants = {
     bindGroup_material: 2,//diffuse texuture and roughness texture（once per switching material）
 
     moveLightsWorkgroupSize: 128,
+    clusteringWorkgroupSize: 64,
 
     lightRadius: 2
 };
