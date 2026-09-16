@@ -1,6 +1,7 @@
 import { Scene } from './stage/scene';
 import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
+import { Clusters } from './stage/clusters';
 import { Stage } from './stage/stage';
 
 export var canvas: HTMLCanvasElement;
@@ -106,6 +107,7 @@ export abstract class Renderer {
     protected scene: Scene;
     protected lights: Lights;
     protected camera: Camera;
+    protected clusters: Clusters;
 
     protected stats: Stats;
 
@@ -116,6 +118,7 @@ export abstract class Renderer {
         this.scene = stage.scene;
         this.lights = stage.lights;
         this.camera = stage.camera;
+        this.clusters = stage.clusters;
         this.stats = stage.stats;
 
         this.frameRequestId = requestAnimationFrame((t) => this.onFrame(t));

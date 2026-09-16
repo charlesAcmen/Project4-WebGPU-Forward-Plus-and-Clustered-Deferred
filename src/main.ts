@@ -1,7 +1,7 @@
 import Stats from 'stats.js';
 import { GUI } from 'dat.gui';
 
-import { initWebGPU, Renderer } from './renderer';
+import { canvas, initWebGPU, Renderer } from './renderer';
 import { NaiveRenderer } from './renderers/naive';
 import { ForwardPlusRenderer } from './renderers/forward_plus';
 import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
@@ -9,6 +9,7 @@ import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
 import { setupLoaders, Scene } from './stage/scene';
 import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
+import { Clusters } from './stage/clusters';
 import { Stage } from './stage/stage';
 
 await initWebGPU();
@@ -18,7 +19,8 @@ let scene = new Scene();
 await scene.loadGltf('./scenes/sponza/Sponza.gltf');
 
 const camera = new Camera();
-const lights = new Lights(camera);
+const clusters = new Clusters(canvas.width, canvas.height);
+const lights = new Lights(camera, clusters);
 
 const stats = new Stats();
 stats.showPanel(0);
@@ -29,7 +31,7 @@ gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(()
     lights.updateLightSetUniformNumLights();
 });
 
-const stage = new Stage(scene, lights, camera, stats);
+const stage = new Stage(scene, lights, camera, clusters, stats);
 
 var renderer: Renderer | undefined;
 
