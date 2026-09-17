@@ -15,6 +15,7 @@ import clusteredDeferredFullscreenVertRaw from './clustered_deferred_fullscreen.
 import clusteredDeferredFullscreenFragRaw from './clustered_deferred_fullscreen.fs.wgsl?raw';
 
 import moveLightsComputeRaw from './move_lights.cs.wgsl?raw';
+import clusteringCommonRaw from './clustering_common.wgsl?raw';
 import clusteringComputeRaw from './clustering.cs.wgsl?raw';
 import adaptiveClusteringComputeRaw from './clustering_adaptive.cs.wgsl?raw';
 
@@ -51,6 +52,10 @@ function processShaderRaw(raw: string) {
     return commonSrc + evalShaderRaw(raw);
 }
 
+function processClusteringShaderRaw(raw: string) {
+    return commonSrc + evalShaderRaw(clusteringCommonRaw) + evalShaderRaw(raw);
+}
+
 export const naiveVertSrc: string = processShaderRaw(naiveVertRaw);
 export const naiveFragSrc: string = processShaderRaw(naiveFragRaw);
 
@@ -61,5 +66,5 @@ export const clusteredDeferredFullscreenVertSrc: string = processShaderRaw(clust
 export const clusteredDeferredFullscreenFragSrc: string = processShaderRaw(clusteredDeferredFullscreenFragRaw);
 
 export const moveLightsComputeSrc: string = processShaderRaw(moveLightsComputeRaw);
-export const clusteringComputeSrc: string = processShaderRaw(clusteringComputeRaw);
-export const adaptiveClusteringComputeSrc: string = processShaderRaw(adaptiveClusteringComputeRaw);
+export const clusteringComputeSrc: string = processClusteringShaderRaw(clusteringComputeRaw);
+export const adaptiveClusteringComputeSrc: string = processClusteringShaderRaw(adaptiveClusteringComputeRaw);
