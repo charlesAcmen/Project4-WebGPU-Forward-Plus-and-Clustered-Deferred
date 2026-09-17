@@ -46,6 +46,11 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                     visibility: GPUShaderStage.FRAGMENT,
                     buffer: { type: "read-only-storage" },
                 },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    buffer: { type: "read-only-storage" },
+                },
             ],
         });
         const sceneUniformsBindGroup = renderer.device.createBindGroup({
@@ -56,6 +61,7 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 { binding: 1, resource: { buffer: this.lights.lightSetStorageBuffer } },
                 { binding: 2, resource: { buffer: this.clusters.metadataStorageBuffer } },
                 { binding: 3, resource: { buffer: this.clusters.lightIndexStorageBuffer } },
+                { binding: 4, resource: { buffer: this.clusters.overflowStorageBuffer } },
             ],
         });
 
