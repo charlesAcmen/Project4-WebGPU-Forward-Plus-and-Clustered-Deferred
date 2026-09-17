@@ -29,21 +29,6 @@
 @group(${bindGroup_scene}) @binding(2) var<storage, read_write> clusterMetadata: array<ClusterMetadata>;
 @group(${bindGroup_scene}) @binding(3) var<storage, read_write> clusterLightIndices: array<u32>;
 @group(${bindGroup_scene}) @binding(4) var<storage, read_write> clusterOverflowFlags: array<u32>;
-//depth=near*(far/near)^(sliceFraction)
-//sliceFraction = sliceIndex / totalSlices
-fn depthAtSlice(slice: u32) -> f32 {
-    let nearPlane = cameraUniforms.projectionParams.x;
-    let farPlane = cameraUniforms.projectionParams.y;
-    let sliceFraction = f32(slice) / f32(${clusterDepthSliceCount});
-    return nearPlane * pow(farPlane / nearPlane, sliceFraction);
-}
-
-fn sphereIntersectsAabb(center: vec3f, radius: f32, aabbMin: vec3f, aabbMax: vec3f) -> bool {
-    let closestPoint = clamp(center, aabbMin, aabbMax);
-    let delta = center - closestPoint;
-    return dot(delta, delta) <= radius * radius;
-}
-
 @compute
 @workgroup_size(${clusteringWorkgroupSize})
 fn main(@builtin(global_invocation_id) globalId: vec3u) {
@@ -73,8 +58,10 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
     let minNdc = vec2f(minNdcX, min(yAtMinPixel, yAtMaxPixel));
     let maxNdc = vec2f(maxNdcX, max(yAtMinPixel, yAtMaxPixel));
 
-    let depthNear = depthAtSlice(zSlice);
-    let depthFar = depthAtSlice(zSlice + 1u);
+    let nearPlane = cameraUniforms.projectionParams.x;
+    let farPlane = cameraUniforms.projectionParams.y;
+    let depthNear = depthAtSlice(zSlice, nearPlane, farPlane);
+    let depthFar = depthAtSlice(zSlice + 1u, nearPlane, farPlane);
     let tanHalfFovY = cameraUniforms.projectionParams.z;
     let aspectRatio = cameraUniforms.projectionParams.w;
 
