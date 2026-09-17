@@ -38,10 +38,14 @@ export const ClusterMetadataGpuLayout = {
     //first 4 bytes: light index offset (uint32) into LightIndexList
     //not value itself,but index into it.
     lightIndexOffsetUint32Offset: 0,
-    //next 4 bytes: light count (uint32)
-    lightCountUint32Offset: 1,
-    uint32sPerCluster: 2,
-    byteStride: 8,
+    //next 4 bytes: allocated index capacity for this cluster (uint32)
+    lightIndexCapacityUint32Offset: 1,
+    //next 4 bytes: number of valid light indices written this frame (uint32)
+    lightCountUint32Offset: 2,
+    //next 4 bytes: total light intersections before adaptive compaction (uint32)
+    candidateLightCountUint32Offset: 3,
+    uint32sPerCluster: 4,
+    byteStride: 16,
 } as const;
 
 export const LightIndexListGpuLayout = {
