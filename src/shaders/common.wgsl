@@ -15,9 +15,11 @@ struct LightSet {
 // TODO-2: you may want to create a ClusterSet struct similar to LightSet
 
 struct ClusterMetadata {
-    // Mirrors ClusterMetadataGpuLayout: a fixed index-list offset and live count.
+    // Mirrors ClusterMetadataGpuLayout: each cluster owns a contiguous index range.
     lightIndexOffset: u32,
+    lightIndexCapacity: u32,
     lightCount: u32,
+    candidateLightCount: u32,
 }
 
 struct CameraUniforms {
