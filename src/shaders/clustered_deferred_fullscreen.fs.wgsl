@@ -33,6 +33,8 @@ fn clusterIndexForFragment(fragCoord: vec4f, posWorld: vec3f) -> u32 {
 }
 
 @fragment
+//@location(0):MRT,multiple render targets.
+//colorAttachment0:positionGBuffer, colorAttachment1:albedoGBuffer, colorAttachment2:normalGBuffer
 fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
     let pixelCoord = vec2i(i32(fragCoord.x), i32(fragCoord.y));
     //load world position from g-buffer after render pass
