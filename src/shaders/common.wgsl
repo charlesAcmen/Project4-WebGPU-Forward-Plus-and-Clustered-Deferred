@@ -33,6 +33,8 @@ struct CameraUniforms {
 
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius
 fn rangeAttenuation(distance: f32) -> f32 {
+    //power of 4 is a good balance between smoothness and performance
+    //becomes 0 at distance = lightRadius, and is 1 at distance = 0
     return clamp(1.f - pow(distance / ${lightRadius}, 4.f), 0.f, 1.f) / (distance * distance);
 }
 
