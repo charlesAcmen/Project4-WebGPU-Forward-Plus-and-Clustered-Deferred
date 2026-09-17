@@ -130,11 +130,15 @@ export function writeClusterMetadata(
     metadata: Uint32Array,
     clusterIndex: number,
     lightIndexOffset: number,
+    lightIndexCapacity: number,
     lightCount: number,
+    candidateLightCount: number,
 ): void {
     const base = clusterIndex * ClusterMetadataGpuLayout.uint32sPerCluster;
     metadata[base + ClusterMetadataGpuLayout.lightIndexOffsetUint32Offset] = lightIndexOffset;
+    metadata[base + ClusterMetadataGpuLayout.lightIndexCapacityUint32Offset] = lightIndexCapacity;
     metadata[base + ClusterMetadataGpuLayout.lightCountUint32Offset] = lightCount;
+    metadata[base + ClusterMetadataGpuLayout.candidateLightCountUint32Offset] = candidateLightCount;
 }
 
 export function createLightIndexList(lightIndexCapacity: number): Uint32Array {
