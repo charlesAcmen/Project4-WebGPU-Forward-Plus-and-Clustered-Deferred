@@ -217,7 +217,7 @@ export class Lights {
         device.queue.writeBuffer(this.lightSetStorageBuffer, LightSetGpuLayout.lightsByteOffset, this.lightsArray.buffer as ArrayBuffer);
     }
 
-    updateLightSetUniformNumLights() {
+    updateLightSetUniformNumLights(): void {
         writeLightSetNumLights(this.lightSetHeader, this.numLights);
         device.queue.writeBuffer(this.lightSetStorageBuffer, LightSetGpuLayout.numLightsOffset, this.lightSetHeader.buffer as ArrayBuffer);
     }
