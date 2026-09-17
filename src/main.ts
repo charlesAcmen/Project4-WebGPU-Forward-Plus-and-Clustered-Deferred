@@ -9,7 +9,7 @@ import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
 import { setupLoaders, Scene } from './stage/scene';
 import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
-import { Clusters } from './stage/clusters';
+import { Clusters, ClusterCapacityStrategy } from './stage/clusters';
 import { Stage } from './stage/stage';
 
 await initWebGPU();
@@ -29,6 +29,15 @@ document.body.appendChild(stats.dom);
 const gui = new GUI();
 gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(() => {
     lights.updateLightSetUniformNumLights();
+});
+
+const clusterStrategyState = { strategy: clusters.capacityStrategy };
+const clusterStrategies = {
+    fixed: "fixed",
+    adaptive: "adaptive",
+};
+gui.add(clusterStrategyState, "strategy", clusterStrategies).onChange((strategy: ClusterCapacityStrategy) => {
+    clusters.setCapacityStrategy(strategy);
 });
 
 const stage = new Stage(scene, lights, camera, clusters, stats);

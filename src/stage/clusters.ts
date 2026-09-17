@@ -16,15 +16,21 @@ export interface ClusterDimensions {
     lightIndexCapacity: number;
 }
 
+export type ClusterCapacityStrategy = "fixed" | "adaptive";
+
 /**
  * Shared cluster-list storage for Forward+ and clustered deferred rendering.
- * The clustering compute pass populates this fixed-capacity contract every frame.
+ * Fixed lists reserve a uniform range per cluster. Adaptive lists compact the
+ * same total index pool every frame, giving dense clusters unused space from
+ * sparse clusters without creating an unbounded per-cluster allocation.
  */
 export class Clusters {
     readonly dimensions: ClusterDimensions;
     readonly metadataStorageBuffer: GPUBuffer;
     readonly lightIndexStorageBuffer: GPUBuffer;
     readonly overflowStorageBuffer: GPUBuffer;
+    capacityStrategy: ClusterCapacityStrategy = "fixed";
+    private readonly fixedMetadata: Uint32Array;
 
     constructor(viewportWidth: number, viewportHeight: number, config: Readonly<ClusterGridConfig> = defaultClusterGridConfig) {
         if (viewportWidth <= 0 || viewportHeight <= 0) {
@@ -75,6 +81,19 @@ export class Clusters {
 
         device.queue.writeBuffer(this.metadataStorageBuffer, 0, metadata.buffer as ArrayBuffer);
         device.queue.writeBuffer(this.overflowStorageBuffer, 0, overflowFlags.buffer as ArrayBuffer);
+    }
+
+    /**
+     * Fixed preserves the original per-cluster capacity. Adaptive performs a
+     * count, compact-prefix, and fill sequence over the shared global pool.
+     */
+    setCapacityStrategy(strategy: ClusterCapacityStrategy): void {
+        this.capacityStrategy = strategy;
+        if (strategy === "fixed") {
+            // Adaptive prefixing overwrites offsets and capacities every frame.
+            // Restore fixed-stride metadata before returning to the baseline path.
+            device.queue.writeBuffer(this.metadataStorageBuffer, 0, this.fixedMetadata.buffer as ArrayBuffer);
+        }
     }
 
     private validateStorageBufferSize(byteSize: number, label: string): void {

@@ -43,6 +43,9 @@ export class Lights {
     lightClusteringBindGroupLayout: GPUBindGroupLayout;
     lightClusteringBindGroup: GPUBindGroup;
     lightClusteringComputePipeline: GPUComputePipeline;
+    adaptiveClusterCountPipeline: GPUComputePipeline;
+    adaptiveClusterPrefixPipeline: GPUComputePipeline;
+    adaptiveClusterFillPipeline: GPUComputePipeline;
 
     // TODO-2: add layouts, pipelines, textures, etc. needed for light clustering here
 
@@ -178,6 +181,30 @@ export class Lights {
                 entryPoint: "main",
             },
         });
+
+        const adaptiveClusteringShader = device.createShaderModule({
+            label: "adaptive light clustering compute shader",
+            code: shaders.adaptiveClusteringComputeSrc,
+        });
+        const adaptiveClusteringPipelineLayout = device.createPipelineLayout({
+            label: "adaptive light clustering pipeline layout",
+            bindGroupLayouts: [this.lightClusteringBindGroupLayout],
+        });
+        this.adaptiveClusterCountPipeline = device.createComputePipeline({
+            label: "adaptive cluster count pipeline",
+            layout: adaptiveClusteringPipelineLayout,
+            compute: { module: adaptiveClusteringShader, entryPoint: "countClusters" },
+        });
+        this.adaptiveClusterPrefixPipeline = device.createComputePipeline({
+            label: "adaptive cluster prefix pipeline",
+            layout: adaptiveClusteringPipelineLayout,
+            compute: { module: adaptiveClusteringShader, entryPoint: "prefixClusterCounts" },
+        });
+        this.adaptiveClusterFillPipeline = device.createComputePipeline({
+            label: "adaptive cluster fill pipeline",
+            layout: adaptiveClusteringPipelineLayout,
+            compute: { module: adaptiveClusteringShader, entryPoint: "fillClusterLists" },
+        });
     }
 
     private populateLightsBuffer() {
@@ -198,12 +225,42 @@ export class Lights {
     doLightClustering(encoder: GPUCommandEncoder) {
         // TODO-2: run the light clustering compute pass(es) here
         // implementing clustering here allows for reusing the code in both Forward+ and Clustered Deferred
+        if (this.clusters.capacityStrategy === "adaptive") {
+            this.doAdaptiveLightClustering(encoder);
+            return;
+        }
+
         const computePass = encoder.beginComputePass({ label: "light clustering compute pass" });
         computePass.setPipeline(this.lightClusteringComputePipeline);
         computePass.setBindGroup(0, this.lightClusteringBindGroup);
         const workgroupCount = Math.ceil(this.clusters.dimensions.clusterCount / shaders.constants.clusteringWorkgroupSize);
         computePass.dispatchWorkgroups(workgroupCount);
         computePass.end();
+    }
+
+    private doAdaptiveLightClustering(encoder: GPUCommandEncoder): void {
+        const clusterWorkgroupCount = Math.ceil(
+            this.clusters.dimensions.clusterCount / shaders.constants.clusteringWorkgroupSize,
+        );
+
+        const countPass = encoder.beginComputePass({ label: "adaptive cluster count pass" });
+        countPass.setPipeline(this.adaptiveClusterCountPipeline);
+        countPass.setBindGroup(0, this.lightClusteringBindGroup);
+        countPass.dispatchWorkgroups(clusterWorkgroupCount);
+        countPass.end();
+
+        // A separate pass makes all cluster counts visible to the serial prefix pass.
+        const prefixPass = encoder.beginComputePass({ label: "adaptive cluster prefix pass" });
+        prefixPass.setPipeline(this.adaptiveClusterPrefixPipeline);
+        prefixPass.setBindGroup(0, this.lightClusteringBindGroup);
+        prefixPass.dispatchWorkgroups(1);
+        prefixPass.end();
+
+        const fillPass = encoder.beginComputePass({ label: "adaptive cluster fill pass" });
+        fillPass.setPipeline(this.adaptiveClusterFillPipeline);
+        fillPass.setBindGroup(0, this.lightClusteringBindGroup);
+        fillPass.dispatchWorkgroups(clusterWorkgroupCount);
+        fillPass.end();
     }
 
     // CHECKITOUT: this is where the light movement compute shader is dispatched from the host
