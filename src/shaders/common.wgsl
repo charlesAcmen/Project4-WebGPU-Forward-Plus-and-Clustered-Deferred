@@ -37,7 +37,7 @@ fn rangeAttenuation(distance: f32) -> f32 {
     //becomes 0 at distance = lightRadius, and is 1 at distance = 0
     return clamp(1.f - pow(distance / ${lightRadius}, 4.f), 0.f, 1.f) / (distance * distance);
 }
-
+//Lambert diffuse lighting model
 fn calculateLightContrib(light: Light, posWorld: vec3f, nor: vec3f) -> vec3f {
     let vecToLight = light.pos - posWorld;
     let distToLight = length(vecToLight);
