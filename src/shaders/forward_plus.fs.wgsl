@@ -19,6 +19,7 @@
 @group(${bindGroup_scene}) @binding(1) var<storage, read> lightSet: LightSet;
 @group(${bindGroup_scene}) @binding(2) var<storage, read> clusterMetadata: array<ClusterMetadata>;
 @group(${bindGroup_scene}) @binding(3) var<storage, read> clusterLightIndices: array<u32>;
+@group(${bindGroup_scene}) @binding(4) var<storage, read> clusterOverflowFlags: array<u32>;
 
 @group(${bindGroup_material}) @binding(0) var diffuseTex: texture_2d<f32>;
 @group(${bindGroup_material}) @binding(1) var diffuseTexSampler: sampler;
@@ -54,11 +55,19 @@ fn main(in: FragmentInput) -> @location(0) vec4f {
         discard;
     }
 
-    let cluster = clusterMetadata[clusterIndexForFragment(in.fragCoord, in.pos)];
+    let clusterIndex = clusterIndexForFragment(in.fragCoord, in.pos);
+    let cluster = clusterMetadata[clusterIndex];
     var totalLightContrib = vec3f(0.f);
-    for (var localLightIndex = 0u; localLightIndex < cluster.lightCount; localLightIndex++) {
-        let light = lightSet.lights[clusterLightIndices[cluster.lightIndexOffset + localLightIndex]];
-        totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
+    if (clusterOverflowFlags[clusterIndex] != 0u) {
+        // Never darken a saturated cluster: correctness takes priority over culling here.
+        for (var lightIndex = 0u; lightIndex < lightSet.numLights; lightIndex++) {
+            totalLightContrib += calculateLightContrib(lightSet.lights[lightIndex], in.pos, normalize(in.nor));
+        }
+    } else {
+        for (var localLightIndex = 0u; localLightIndex < cluster.lightCount; localLightIndex++) {
+            let light = lightSet.lights[clusterLightIndices[cluster.lightIndexOffset + localLightIndex]];
+            totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
+        }
     }
 
     return vec4f(diffuseColor.rgb * totalLightContrib, 1.f);
