@@ -53,11 +53,18 @@ export class Clusters {
 
         const metadata = createClusterMetadata(clusterCount);
         for (let clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
-            // A fixed region per cluster avoids dynamic allocation in the future compute pass.
-            writeClusterMetadata(metadata, clusterIndex, clusterIndex * config.maxLightsPerCluster, 0);
+            writeClusterMetadata(
+                metadata,
+                clusterIndex,
+                clusterIndex * config.maxLightsPerCluster,
+                config.maxLightsPerCluster,
+                0,
+                0,
+            );
         }
         const overflowFlags = createClusterOverflowFlags(clusterCount);
         const lightIndices = createLightIndexList(lightIndexCapacity);
+        this.fixedMetadata = metadata;
 
         this.validateStorageBufferSize(metadata.byteLength, "cluster metadata");
         this.validateStorageBufferSize(overflowFlags.byteLength, "cluster overflow flags");
