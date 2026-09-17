@@ -91,14 +91,17 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
     let aabbMax = vec3f(max(max(nearMin.x, nearMax.x), max(farMin.x, farMax.x)), max(max(nearMin.y, nearMax.y), max(farMin.y, farMax.y)), -depthNear);
 
     let lightIndexOffset = clusterMetadata[clusterIndex].lightIndexOffset;
+    let lightIndexCapacity = clusterMetadata[clusterIndex].lightIndexCapacity;
     var acceptedLightCount = 0u;
+    var candidateLightCount = 0u;
     clusterOverflowFlags[clusterIndex] = 0u;
 
     for (var lightIndex = 0u; lightIndex < lightSet.numLights; lightIndex++) {
         let lightViewPos = (cameraUniforms.viewMat * vec4f(lightSet.lights[lightIndex].pos, 1.f)).xyz;
         //%{}f:single source of truth,f:literal suffix
         if (sphereIntersectsAabb(lightViewPos, ${lightRadius}f, aabbMin, aabbMax)) {
-            if (acceptedLightCount < ${maxLightsPerCluster}u) {
+            candidateLightCount += 1u;
+            if (acceptedLightCount < lightIndexCapacity) {
                 clusterLightIndices[lightIndexOffset + acceptedLightCount] = lightIndex;
                 acceptedLightCount += 1u;
             } else {
@@ -108,4 +111,5 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
     }
 
     clusterMetadata[clusterIndex].lightCount = acceptedLightCount;
+    clusterMetadata[clusterIndex].candidateLightCount = candidateLightCount;
 }
