@@ -5,7 +5,7 @@
 // This declaration must match the host bind-group layout: group 0, binding 0, uniform buffer.
 @group(${bindGroup_scene}) @binding(0) var<uniform> cameraUniforms: CameraUniforms;
 
-@group(${bindGroup_model}) @binding(0) var<uniform> modelMat: mat4x4f;
+@group(${bindGroup_model}) @binding(0) var<uniform> modelUniforms: ModelUniforms;
 
 struct VertexInput
 {
@@ -25,13 +25,16 @@ struct VertexOutput
 @vertex
 fn main(in: VertexInput) -> VertexOutput
 {
-    let modelPos = modelMat * vec4(in.pos, 1);
+    let modelPos = modelUniforms.modelMat * vec4(in.pos, 1);
 
     var out: VertexOutput;
     // World-space modelPos becomes clip space for rasterization through the camera transform.
     out.fragPos = cameraUniforms.viewProjMat * modelPos; // TODO-1.3:CameraUniforms uniform variable
     out.pos = modelPos.xyz / modelPos.w;
-    out.nor = in.nor;
+    // The old code forwarded object-space normals while positions and lights
+    // were world-space. inverse-transpose also keeps normals correct under
+    // non-uniform model scaling.
+    out.nor = normalize((modelUniforms.normalMat * vec4(in.nor, 0.f)).xyz);
     out.uv = in.uv;
     return out;
 }
