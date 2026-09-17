@@ -41,7 +41,7 @@ fn depthAtSlice(slice: u32) -> f32 {
 fn sphereIntersectsAabb(center: vec3f, radius: f32, aabbMin: vec3f, aabbMax: vec3f) -> bool {
     let closestPoint = clamp(center, aabbMin, aabbMax);
     let delta = center - closestPoint;
-    return dot(d elta, delta) <= radius * radius;
+    return dot(delta, delta) <= radius * radius;
 }
 
 @compute
