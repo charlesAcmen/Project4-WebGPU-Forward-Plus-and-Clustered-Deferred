@@ -27,6 +27,8 @@ struct CameraUniforms {
     // Mirrors CameraGpuLayout: matrices are followed by two vec4f clustering parameter blocks.
     viewProjMat: mat4x4f,
     viewMat: mat4x4f,
+    // Required by packed deferred lighting to reconstruct world position from depth.
+    inverseViewProjMat: mat4x4f,
     // near plane, far plane, tan(fovY / 2), aspect ratio
     projectionParams: vec4f,
     // viewport width, viewport height, reciprocal width, reciprocal height
