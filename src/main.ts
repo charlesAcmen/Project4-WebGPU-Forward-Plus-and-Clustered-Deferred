@@ -58,6 +58,7 @@ gui.add(visibilityDebugState, 'view', visibilityDebugViews).name('visibility deb
 const stage = new Stage(scene, lights, camera, clusters, stats);
 
 var renderer: Renderer | undefined;
+let activeRenderMode = '';
 
 function setRenderer(mode: string) {
     // Do this check before stopping the active renderer. A machine that lacks
@@ -80,13 +81,30 @@ function setRenderer(mode: string) {
         case renderModes.forwardPlus:
             renderer = new ForwardPlusRenderer(stage);
             break;
-        case renderModes.clusteredDeferred:
+        case renderModes.clusteredDeferredBase:
             renderer = new ClusteredDeferredRenderer(stage);
             break;
+        case renderModes.clusteredDeferredOptimized:
+            renderer = new OptimizedClusteredDeferredRenderer(stage);
+            break;
+        case renderModes.visibilityBuffer:
+            renderer = new VisibilityBufferRenderer(stage);
+            break;
     }
+
+    activeRenderMode = mode;
 }
 
-const renderModes = { naive: 'naive', forwardPlus: 'forward+', clusteredDeferred: 'clustered deferred' };
+// Keep all deferred paths selectable. Each mode represents a different trade:
+// base is the readable MRT reference, packed compute is G-buffer compression,
+// and Visibility Buffer stores only triangle identity before reconstruction.
+const renderModes = {
+    naive: 'naive',
+    forwardPlus: 'forward+',
+    clusteredDeferredBase: 'clustered deferred (base)',
+    clusteredDeferredOptimized: 'clustered deferred (packed compute)',
+    visibilityBuffer: 'visibility buffer (compute reconstruction)',
+};
 let renderModeController = gui.add({ mode: renderModes.naive }, 'mode', renderModes);
 renderModeController.onChange(setRenderer);
 
