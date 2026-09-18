@@ -40,6 +40,14 @@ gui.add(clusterStrategyState, "strategy", clusterStrategies).onChange((strategy:
     clusters.setCapacityStrategy(strategy);
 });
 
+// This selector does not switch renderer pipelines. It changes only a tiny
+// uniform consumed by Visibility Buffer's compute pass, making it safe to use
+// while diagnosing which producer/consumer stage first turns into black.
+const visibilityDebugState = { view: visibilityDebugViews.finalLighting };
+gui.add(visibilityDebugState, 'view', visibilityDebugViews).name('visibility debug').onChange((view: VisibilityDebugView) => {
+    setVisibilityDebugView(view);
+});
+
 const stage = new Stage(scene, lights, camera, clusters, stats);
 
 var renderer: Renderer | undefined;
