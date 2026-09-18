@@ -26,10 +26,15 @@ function getFloatArray(gltfWithBuffers: GLTFWithBuffers, attribute: number) {
 }
 
 class Texture {
+    // Retain the decoded source as well as the ordinary 2D GPU texture. The
+    // normal render paths keep sampling `image`; Visibility Buffer later copies
+    // `source` into a common texture-array layer for dynamic material lookup.
+    source: ImageBitmap;
     image: GPUTexture;
     sampler: GPUSampler;
 
-    constructor(image: GPUTexture, sampler: GPUSampler) {
+    constructor(source: ImageBitmap, image: GPUTexture, sampler: GPUSampler) {
+        this.source = source;
         this.image = image;
         this.sampler = sampler;
     }
