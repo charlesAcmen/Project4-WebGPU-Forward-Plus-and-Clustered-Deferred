@@ -60,6 +60,17 @@ const stage = new Stage(scene, lights, camera, clusters, stats);
 var renderer: Renderer | undefined;
 
 function setRenderer(mode: string) {
+    // Do this check before stopping the active renderer. A machine that lacks
+    // the optional primitive-index feature should continue displaying the last
+    // working path instead of leaving the canvas idle after a GUI selection.
+    if (mode === renderModes.visibilityBuffer && !supportsPrimitiveIndex) {
+        console.error(
+            'Visibility Buffer mode needs WebGPU primitive-index support; retaining the current renderer.',
+        );
+        renderModeController.setValue(activeRenderMode);
+        return;
+    }
+
     renderer?.stop();
 
     switch (mode) {
