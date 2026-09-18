@@ -684,7 +684,7 @@ export class Scene {
     }
 
     iterate(nodeFunction: (node: Node) => void, materialFunction: (material: Material) => void,
-        primFunction: (primitive: Primitive) => void) {
+        primFunction: (primitive: Primitive, node: Node) => void) {
         let nodes = [this.root];
 
         let lastMaterialId: number | undefined = undefined;
@@ -700,7 +700,10 @@ export class Scene {
                         lastMaterialId = primitive.material.id;
                     }
 
-                    primFunction(primitive);
+                    // Existing renderers may ignore the second argument. The
+                    // Visibility Buffer renderer needs it to select the exact
+                    // Node x Primitive object ID and model transform.
+                    primFunction(primitive, node);
                 }
             }
 
