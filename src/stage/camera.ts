@@ -179,6 +179,9 @@ export class Camera {
         const viewProjMat = mat4.mul(this.projMat, viewMat);
         // TODO-1.1: set `this.uniforms.viewProjMat` to the newly calculated view proj mat
         this.uniforms.viewProjMat = viewProjMat;
+        // Compute this once on the CPU instead of performing a matrix inverse
+        // independently for every packed-deferred lighting invocation.
+        this.uniforms.inverseViewProjMat = mat4.inverse(viewProjMat);
 
         // TODO-2: write to extra buffers needed for light clustering here
         this.uniforms.viewMat = viewMat;
