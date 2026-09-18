@@ -322,8 +322,11 @@ export class Scene {
         let sceneTextures: Texture[] = [];
         {
             let sceneImages: GPUTexture[] = [];
+            let sceneImageBitmaps: ImageBitmap[] = [];
             for (let gltfImage of gltfWithBuffers.images!) {
-                sceneImages.push(createTexture(gltfImage as ImageBitmap))
+                const imageBitmap = gltfImage as ImageBitmap;
+                sceneImageBitmaps.push(imageBitmap);
+                sceneImages.push(createTexture(imageBitmap))
             }
 
             let sceneSamplers: GPUSampler[] = [];
@@ -332,7 +335,11 @@ export class Scene {
             }
 
             for (let gltfTexture of gltf.textures!) {
-                sceneTextures.push(new Texture(sceneImages[gltfTexture.source!], sceneSamplers[gltfTexture.sampler!]));
+                sceneTextures.push(new Texture(
+                    sceneImageBitmaps[gltfTexture.source!],
+                    sceneImages[gltfTexture.source!],
+                    sceneSamplers[gltfTexture.sampler!],
+                ));
             }
         }
 
