@@ -135,19 +135,22 @@ export class Primitive {
             vertsArray[vertStartIdx + 7] = uvsArray[vertIdx * 2 + 1];
         }
 
+        this.indexData = indicesArray;
+        this.vertexData = vertsArray;
+
         this.indexBuffer = device.createBuffer({
             label: "index buffer",
             size: indicesArray.byteLength,
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         });
-        device.queue.writeBuffer(this.indexBuffer, 0, indicesArray);
+        device.queue.writeBuffer(this.indexBuffer, 0, this.indexData);
 
         this.vertexBuffer = device.createBuffer({
             label: "vertex buffer",
             size: vertsArray.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
-        device.queue.writeBuffer(this.vertexBuffer, 0, vertsArray);
+        device.queue.writeBuffer(this.vertexBuffer, 0, this.vertexData);
 
         this.numIndices = indicesArray.length;
     }
