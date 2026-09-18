@@ -115,6 +115,25 @@ export function writeCameraClusteringParams(
     target.set([nearPlane, farPlane, tanHalfFovY, aspectRatio], CameraGpuLayout.projectionParamsFloatOffset);
     target.set([viewportWidth, viewportHeight, 1 / viewportWidth, 1 / viewportHeight], CameraGpuLayout.viewportFloatOffset);
 }
+
+export function createModelUniformData(): Float32Array<ArrayBuffer> {
+    return new Float32Array(ModelGpuLayout.float32Count);
+}
+
+export function writeModelUniforms(
+    target: Float32Array,
+    modelMat: ArrayLike<number>,
+    normalMat: ArrayLike<number>,
+): void {
+    if (target.byteLength !== ModelGpuLayout.byteSize) {
+        throw new Error("Model uniform data must match ModelGpuLayout.byteSize.");
+    }
+    if (modelMat.length !== 16 || normalMat.length !== 16) {
+        throw new Error("Model and normal matrices must each contain 16 floats.");
+    }
+    target.set(modelMat, ModelGpuLayout.modelMatFloatOffset);
+    target.set(normalMat, ModelGpuLayout.normalMatFloatOffset);
+}
 //return Float32Array:single precision floating point array
 export function createLightRecordData(maxNumLights: number): Float32Array<ArrayBuffer> {
     return new Float32Array(maxNumLights * LightGpuLayout.float32sPerLight);
