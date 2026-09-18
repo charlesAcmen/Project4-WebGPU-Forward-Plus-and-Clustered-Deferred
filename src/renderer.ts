@@ -59,7 +59,10 @@ export async function initWebGPU() {
     });
 
     context = canvas.getContext("webgpu")!;
-    canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+    // The compute lighting pass writes the present texture directly. rgba8unorm
+    // is a core write-only storage-texture format, unlike bgra8unorm which needs
+    // the optional bgra8unorm-storage feature on some adapters.
+    canvasFormat = "rgba8unorm";
     context.configure({
         device: device,
         format: canvasFormat,
