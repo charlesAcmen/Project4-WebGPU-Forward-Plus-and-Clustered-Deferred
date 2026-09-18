@@ -81,6 +81,9 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
         return;
     }
 
+    // One 4-byte G-buffer fetch replaces the base path's separate normal and
+    // albedo texture fetches. Position remains absent by design and is rebuilt
+    // from the depth texture below, completing the packed representation.
     let packed = textureLoad(packedMaterialGBuffer, pixelCoord, 0);
     let normal = decodeOctNormal(packed.xy);
     let albedo = decodeRgb565(packed.zw);

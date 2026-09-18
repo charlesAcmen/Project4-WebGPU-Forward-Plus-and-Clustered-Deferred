@@ -47,7 +47,19 @@ export class OptimizedClusteredDeferredRenderer extends renderer.Renderer {
         const packedMaterialTexture = renderer.device.createTexture({
             label: 'Packed deferred material G-buffer: oct normal plus RGB565',
             size: [renderer.canvas.width, renderer.canvas.height],
-            // Four exact bytes: RG = oct-normal, BA = little-endian RGB565.
+            // Bandwidth accounting for the geometry pass:
+            //
+            // Base clustered deferred writes three color targets per covered
+            // pixel: world position rgba16float (8 B), normal rgba16float
+            // (8 B), and albedo rgba8unorm (4 B): 20 B of color data.
+            //
+            // This path writes one rgba8uint target: exactly 4 B. RG hold an
+            // octahedral-encoded normal (8 bits per component); BA hold a
+            // little-endian RGB565 albedo (5/6/5 bits). World position is not
+            // stored at all: the later compute pass reconstructs it from the
+            // already-required depth32float attachment and inverse VP matrix.
+            // Less G-buffer data is written in the geometry pass and read in
+            // the lighting pass, reducing external VRAM bandwidth pressure.
             format: 'rgba8uint',
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         });

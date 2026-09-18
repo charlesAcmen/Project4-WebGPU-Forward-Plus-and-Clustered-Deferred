@@ -12,7 +12,19 @@ struct FragmentInput {
 }
 
 struct PackedGBufferOutput {
-    // rgba8uint stores exactly four bytes rather than three float targets.
+    // rgba8uint stores exactly four bytes rather than the base path's 20-byte
+    // color G-buffer payload:
+    //
+    //   R = octahedral normal X, 8 bits
+    //   G = octahedral normal Y, 8 bits
+    //   B = RGB565 low byte
+    //   A = RGB565 high byte
+    //
+    // The geometry pass therefore stores 16 bits of normal plus 16 bits of
+    // albedo. It deliberately omits world position; the compute consumer
+    // reconstructs it from depth and inverseViewProjMat instead of fetching a
+    // separate position texture. This is a bandwidth trade: a little extra
+    // arithmetic replaces substantially more per-pixel VRAM traffic.
     @location(0) packedMaterial: vec4u,
 }
 
