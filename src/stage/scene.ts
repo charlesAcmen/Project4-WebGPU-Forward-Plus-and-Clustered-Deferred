@@ -44,10 +44,17 @@ export class Material {
     private static nextId = 0;
     readonly id: number;
 
+    // A Visibility Buffer shading invocation chooses a material from a single
+    // texture_2d_array. This is the array layer assigned during scene loading,
+    // not the glTF texture index (which may include normal/ORM textures).
+    readonly visibilityTextureLayer: number;
+    readonly diffuseTexture: Texture;
+
     materialBindGroup: GPUBindGroup;
 
-    constructor(gltfMaterial: GLTFMaterial, textures: Texture[]) {
+    constructor(gltfMaterial: GLTFMaterial, textures: Texture[], visibilityTextureLayer: number) {
         this.id = Material.nextId++;
+        this.visibilityTextureLayer = visibilityTextureLayer;
 
         const diffuseTexture = textures[gltfMaterial.pbrMetallicRoughness!.baseColorTexture!.index];
 
