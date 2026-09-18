@@ -485,6 +485,204 @@ export class Scene {
         sceneRoot.propagateTransformations();
     }
 
+    /**
+     * Lazily build the data representation needed only by Visibility Buffer.
+     * This keeps the base/packed renderers unchanged and avoids allocating
+     * duplicate storage buffers or a texture array unless the GUI mode is used.
+     */
+    getVisibilitySceneData(): VisibilitySceneData {
+        if (this.visibilitySceneData !== undefined) {
+            return this.visibilitySceneData;
+        }
+        if (this.visibilityMaterials.length === 0) {
+            throw new Error("Visibility Buffer requires a loaded scene with materials.");
+        }
+        if (this.visibilityMaterials.length > device.limits.maxTextureArrayLayers) {
+            throw new Error("Visibility material texture array exceeds maxTextureArrayLayers.");
+        }
+
+        const renderItems: VisibilityRenderItem[] = [];
+        this.iterate(() => {}, () => {}, (primitive, node) => {
+            const triangleCount = primitive.numIndices / 3;
+            if (!Number.isInteger(triangleCount) || triangleCount >= visibilityIdLimit) {
+                throw new Error(
+                    `Primitive has ${triangleCount} triangles; Visibility Buffer supports fewer than ${visibilityIdLimit}.`,
+                );
+            }
+
+            // The geometry pass and the storage buffers must describe exactly
+            // the same triangle list. Fail during scene preparation if a
+            // future asset violates the compact [pos|normal|uv] CPU layout or
+            // contains an index that drawIndexed() itself would not reject.
+            if (primitive.vertexData.length % visibilityVertexFloatStride !== 0) {
+                throw new Error("Visibility Buffer vertex data is not an integral number of vertices.");
+            }
+            const vertexCount = primitive.vertexData.length / visibilityVertexFloatStride;
+            for (const index of primitive.indexData) {
+                if (index >= vertexCount) {
+                    throw new Error("Visibility Buffer index data references a vertex outside its primitive.");
+                }
+            }
+            renderItems.push({ objectId: renderItems.length, node, primitive });
+        });
+
+        // Reserve the all-ones packed ID as unreachable too, because adding one
+        // converts the packed value into the non-zero attachment representation.
+        if (renderItems.length >= visibilityIdLimit - 1) {
+            throw new Error(`Scene has too many visibility objects for ${visibilityTriangleIdBits}-bit ObjectID packing.`);
+        }
+
+        // 解决：同一个 Primitive 被多个 Node 实例化时，顶点/index 被重复存多次
+        // Geometry is concatenated once per unique Primitive. Object records
+        // reference it with element offsets, so mesh instancing does not copy
+        // vertex/index data merely because a node has a different transform.
+        const geometryOffsets = new Map<Primitive, VisibilityGeometryOffsets>();
+        let totalVertexFloatCount = 0;
+        let totalIndexCount = 0;
+        for (const renderItem of renderItems) {
+            if (geometryOffsets.has(renderItem.primitive)) {
+                continue;
+            }
+            geometryOffsets.set(renderItem.primitive, {
+                vertexFloatOffset: totalVertexFloatCount,
+                indexOffset: totalIndexCount,
+            });
+            totalVertexFloatCount += renderItem.primitive.vertexData.length;
+            totalIndexCount += renderItem.primitive.indexData.length;
+        }
+
+        const visibilityVertexData = new Float32Array(totalVertexFloatCount);
+        const visibilityIndexData = new Uint32Array(totalIndexCount);
+        for (const [primitive, offsets] of geometryOffsets) {
+            visibilityVertexData.set(primitive.vertexData, offsets.vertexFloatOffset);
+            visibilityIndexData.set(primitive.indexData, offsets.indexOffset);
+        }
+
+        const validateStorageBufferSize = (byteSize: number, label: string) => {
+            if (byteSize > device.limits.maxStorageBufferBindingSize) {
+                throw new Error(`${label} exceeds maxStorageBufferBindingSize.`);
+            }
+        };
+        validateStorageBufferSize(visibilityVertexData.byteLength, "Visibility vertex storage buffer");
+        validateStorageBufferSize(visibilityIndexData.byteLength, "Visibility index storage buffer");
+
+        const vertexStorageBuffer = device.createBuffer({
+            label: "Visibility Buffer packed vertex storage",
+            size: visibilityVertexData.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const indexStorageBuffer = device.createBuffer({
+            label: "Visibility Buffer triangle index storage",
+            size: visibilityIndexData.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(vertexStorageBuffer, 0, visibilityVertexData);
+        device.queue.writeBuffer(indexStorageBuffer, 0, visibilityIndexData);
+
+        // VisibilityObject's WGSL layout is an eight-u32 header followed by
+        // two mat4x4f values: 32 + 64 + 64 = 160 bytes (40 f32 slots). The
+        // header is written through Uint32Array; matrices through Float32Array
+        // over the same ArrayBuffer. Keep these offsets synchronized with
+        // visibility_lighting.cs.wgsl.
+        const objectData = new ArrayBuffer(
+            renderItems.length * visibilityObjectFloatCount * Float32Array.BYTES_PER_ELEMENT,
+        );
+        const objectUintView = new Uint32Array(objectData);
+        const objectFloatView = new Float32Array(objectData);
+        //upload to GPU buffer
+        for (const renderItem of renderItems) {
+            //distinguished one
+            const offsets = geometryOffsets.get(renderItem.primitive)!;
+            const base = renderItem.objectId * visibilityObjectFloatCount;
+            objectUintView[base] = offsets.indexOffset;
+            objectUintView[base + 1] = offsets.vertexFloatOffset;
+            objectUintView[base + 2] = renderItem.primitive.indexData.length;
+            objectUintView[base + 3] = renderItem.primitive.vertexData.length / visibilityVertexFloatStride;
+            objectUintView[base + 4] = renderItem.primitive.material.visibilityTextureLayer;
+            objectUintView[base + 5] = 0;
+            objectUintView[base + 6] = 0;
+            objectUintView[base + 7] = 0;
+
+            objectFloatView.set(renderItem.node.transform, base + visibilityObjectHeaderUint32Count);
+            const normalMat = mat4.transpose(mat4.inverse(renderItem.node.transform));
+            objectFloatView.set(normalMat, base + visibilityObjectHeaderUint32Count + 16);
+        }
+        //every record records:
+        // 几何在哪：indexOffset / vertexFloatOffset
+        // 几何多大：indexCount / vertexCount
+        // 材质是哪层：materialLayer
+        // 实例怎么变换：modelMat / normalMat
+        validateStorageBufferSize(objectData.byteLength, "Visibility object storage buffer");
+        const objectStorageBuffer = device.createBuffer({
+            label: "Visibility Buffer object records",
+            size: objectData.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(objectStorageBuffer, 0, objectData);
+
+        // Compute shaders cannot choose among ordinary per-material bind groups.
+        // Resampling source images into equal-sized array layers creates one
+        // dynamically indexable texture_2d_array. The starter Sponza asset has
+        // one sampler, so retaining the first material sampler preserves its
+        // repeat/filter behavior while textureSampleLevel fixes LOD at zero.
+        const materialTextureArray = device.createTexture({
+            label: "Visibility Buffer base-color texture array",
+            size: [
+                visibilityMaterialAtlasExtent,
+                visibilityMaterialAtlasExtent,
+                this.visibilityMaterials.length,
+            ],
+            format: "rgba8unorm",
+            // WebGPU requires COPY_DST + RENDER_ATTACHMENT on the destination of
+            // copyExternalImageToTexture. Missing RENDER_ATTACHMENT makes every
+            // upload a validation failure, so albedo samples stay black.
+            usage:
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        const resizeCanvas = new OffscreenCanvas(visibilityMaterialAtlasExtent, visibilityMaterialAtlasExtent);
+        const resizeContext = resizeCanvas.getContext("2d");
+        if (resizeContext === null) {
+            throw new Error("Visibility Buffer could not create an OffscreenCanvas 2D context.");
+        }
+        for (const material of this.visibilityMaterials) {
+            resizeContext.clearRect(0, 0, visibilityMaterialAtlasExtent, visibilityMaterialAtlasExtent);
+            resizeContext.drawImage(
+                material.diffuseTexture.source,
+                0,
+                0,
+                visibilityMaterialAtlasExtent,
+                visibilityMaterialAtlasExtent,
+            );
+            device.queue.copyExternalImageToTexture(
+                //resized to visibilityMaterialAtlasExtent x visibilityMaterialAtlasExtent
+                { source: resizeCanvas },
+                {
+                    texture: materialTextureArray,
+                    origin: { x: 0, y: 0, z: material.visibilityTextureLayer },
+                },
+                [visibilityMaterialAtlasExtent, visibilityMaterialAtlasExtent, 1],
+            );
+        }
+
+        this.visibilitySceneData = {
+            renderItems,
+            vertexStorageBuffer,
+            indexStorageBuffer,
+            objectStorageBuffer,
+            materialTextureArrayView: materialTextureArray.createView({
+                //corresponding to the texture_2d_array<f32> type in WGSL
+                //var visibilityMaterialTextures: texture_2d_array<f32>;
+                dimension: "2d-array",
+                baseArrayLayer: 0,
+                arrayLayerCount: this.visibilityMaterials.length,
+            }),
+            materialSampler: this.visibilityMaterials[0].diffuseTexture.sampler,
+        };
+        return this.visibilitySceneData;
+    }
+
     iterate(nodeFunction: (node: Node) => void, materialFunction: (material: Material) => void,
         primFunction: (primitive: Primitive) => void) {
         let nodes = [this.root];
