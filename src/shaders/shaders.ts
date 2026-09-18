@@ -56,25 +56,35 @@ export const constants = {
 
 // =================================
 
-function evalShaderRaw(raw: string) {
-    return eval('`' + raw.replaceAll('${', '${constants.') + '`');
+type ShaderConstantName = keyof typeof constants;
+
+// WGSL files use ${name} placeholders for numeric pipeline constants. Do not
+// evaluate them as JavaScript: production minification cannot see dynamic
+// property reads inside eval(), so it may remove a constant such as lightRadius.
+function expandShaderConstants(raw: string): string {
+    return raw.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (placeholder, name: string) => {
+        if (!Object.prototype.hasOwnProperty.call(constants, name)) {
+            throw new Error(`Unknown WGSL shader constant: ${placeholder}`);
+        }
+        return String(constants[name as ShaderConstantName]);
+    });
 }
 
-const commonSrc: string = evalShaderRaw(commonRaw);
+const commonSrc: string = expandShaderConstants(commonRaw);
 
 function processShaderRaw(raw: string) {
-    return commonSrc + evalShaderRaw(raw);
+    return commonSrc + expandShaderConstants(raw);
 }
 
 function processPrimitiveIndexShaderRaw(raw: string) {
     // WGSL `enable` directives must appear before every declaration. common.wgsl
     // normally comes first, so this special processor emits the feature enable
     // before the shared structs and then appends the Visibility fragment code.
-    return 'enable primitive_index;\n' + commonSrc + evalShaderRaw(raw);
+    return 'enable primitive_index;\n' + commonSrc + expandShaderConstants(raw);
 }
 
 function processClusteringShaderRaw(raw: string) {
-    return commonSrc + evalShaderRaw(clusteringCommonRaw) + evalShaderRaw(raw);
+    return commonSrc + expandShaderConstants(clusteringCommonRaw) + expandShaderConstants(raw);
 }
 
 export const naiveVertSrc: string = processShaderRaw(naiveVertRaw);
