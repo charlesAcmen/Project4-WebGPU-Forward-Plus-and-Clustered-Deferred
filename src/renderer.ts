@@ -54,7 +54,9 @@ export async function initWebGPU() {
     // running on an adapter that does not. The visibility renderer itself
     // performs the corresponding user-facing availability check.
     supportsPrimitiveIndex = adapter.features.has("primitive-index");
-    device = await adapter.requestDevice();
+    device = await adapter.requestDevice({
+        requiredFeatures: supportsPrimitiveIndex ? ["primitive-index"] : [],
+    });
 
     context = canvas.getContext("webgpu")!;
     canvasFormat = navigator.gpu.getPreferredCanvasFormat();
