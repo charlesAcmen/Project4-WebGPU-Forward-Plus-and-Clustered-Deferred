@@ -310,6 +310,10 @@ function createSampler(gltfSampler: GLTFSampler): GPUSampler {
 
 export class Scene {
     private root: Node = new Node();
+    private visibilityMaterials: Material[] = [];
+    //union type:similar to std::optional<VisibilitySceneData> in C++
+    //this is for lazy initialization.Designned especially for the Visibility Buffer path
+    private visibilitySceneData: VisibilitySceneData | undefined;
 
     constructor() {
         this.root.setName("root");
