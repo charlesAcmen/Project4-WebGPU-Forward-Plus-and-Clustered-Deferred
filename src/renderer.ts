@@ -49,6 +49,11 @@ export async function initWebGPU() {
         throw new Error("no appropriate GPUAdapter found");
     }
 
+    // Visibility Buffer support is optional: request the feature when the
+    // adapter exposes it, but do not prevent Naive/Forward+/Deferred from
+    // running on an adapter that does not. The visibility renderer itself
+    // performs the corresponding user-facing availability check.
+    supportsPrimitiveIndex = adapter.features.has("primitive-index");
     device = await adapter.requestDevice();
 
     context = canvas.getContext("webgpu")!;
@@ -59,6 +64,7 @@ export async function initWebGPU() {
     });
 
     console.log("WebGPU init successsful");
+    console.log(`Visibility Buffer primitive-index support: ${supportsPrimitiveIndex}`);
 
     modelBindGroupLayout = device.createBindGroupLayout({
         label: "model bind group layout",
