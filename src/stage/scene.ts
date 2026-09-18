@@ -345,8 +345,12 @@ export class Scene {
 
         let sceneMaterials: Material[] = [];
         for (let gltfMaterial of gltf.materials!) {
-            sceneMaterials.push(new Material(gltfMaterial, sceneTextures));
+            // Layer order follows material order, making MaterialID a stable
+            // direct lookup into the Visibility Buffer texture array.
+            sceneMaterials.push(new Material(gltfMaterial, sceneTextures, sceneMaterials.length));
         }
+        this.visibilityMaterials = sceneMaterials;
+        this.visibilitySceneData = undefined;
 
         let sceneMeshes: Mesh[] = [];
         for (let gltfMesh of gltf.meshes!) {
