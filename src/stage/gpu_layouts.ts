@@ -7,12 +7,26 @@ export const CameraGpuLayout = {
     viewProjMatFloatOffset: 0,//视图投影复合矩阵,4x4矩阵,16个float
     viewProjMatFloatCount: 16,
     viewMatFloatOffset: 16,//视图矩阵(世界坐标->观察空间)
+    // Inverse(viewProj). Packed deferred compute uses this to reconstruct
+    // world-space positions from the sampled depth buffer.
+    inverseViewProjMatFloatOffset: 32,
     //投影参数,4个float:
     //near plane, far plane, tan(fovY/2), aspect ratio in vec4f
-    projectionParamsFloatOffset: 32,
+    projectionParamsFloatOffset: 48,
     //视口参数,4个float:
     //viewport width, viewport height, 1/width, 1/height in vec4f
-    viewportFloatOffset: 36,
+    viewportFloatOffset: 52,
+    float32Count: 56,
+    byteSize: 224,
+} as const;
+
+/**
+ * CPU-to-WGSL ABI for ModelUniforms in common.wgsl. Normals require the
+ * inverse-transpose transform when a model has non-uniform scale.
+ */
+export const ModelGpuLayout = {
+    modelMatFloatOffset: 0,
+    normalMatFloatOffset: 16,
     float32Count: 40,
     byteSize: 160,
 } as const;
@@ -79,6 +93,13 @@ export function writeCameraView(target: Float32Array, matrix: ArrayLike<number>)
         throw new Error("Camera view matrix must contain 16 floats.");
     }
     target.set(matrix, CameraGpuLayout.viewMatFloatOffset);
+}
+
+export function writeCameraInverseViewProjection(target: Float32Array, matrix: ArrayLike<number>): void {
+    if (matrix.length !== CameraGpuLayout.viewProjMatFloatCount) {
+        throw new Error("Camera inverse view-projection matrix must contain 16 floats.");
+    }
+    target.set(matrix, CameraGpuLayout.inverseViewProjMatFloatOffset);
 }
 
 export function writeCameraClusteringParams(
