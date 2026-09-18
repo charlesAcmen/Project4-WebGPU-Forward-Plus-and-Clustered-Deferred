@@ -10,6 +10,12 @@ export var context: GPUCanvasContext;
 export var device: GPUDevice;
 export var canvasTextureView: GPUTextureView;
 
+// `primitive-index` is not part of the minimum WebGPU feature set. The
+// Visibility Buffer renderer uses it to obtain the triangle number of the
+// current indexed draw directly in its fragment shader. Keeping the result
+// here lets the GUI leave the other render paths usable on older adapters.
+export var supportsPrimitiveIndex = false;
+
 export var aspectRatio: number;
 export const fovYDegrees = 45;
 
