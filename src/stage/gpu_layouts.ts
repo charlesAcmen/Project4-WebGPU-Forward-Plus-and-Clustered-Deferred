@@ -27,8 +27,8 @@ export const CameraGpuLayout = {
 export const ModelGpuLayout = {
     modelMatFloatOffset: 0,
     normalMatFloatOffset: 16,
-    float32Count: 40,
-    byteSize: 160,
+    float32Count: 32,
+    byteSize: 128,
 } as const;
 
 export const LightGpuLayout = {
