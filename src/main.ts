@@ -1,10 +1,17 @@
 import Stats from 'stats.js';
 import { GUI } from 'dat.gui';
 
-import { canvas, initWebGPU, Renderer } from './renderer';
+import { canvas, initWebGPU, Renderer, supportsPrimitiveIndex } from './renderer';
 import { NaiveRenderer } from './renderers/naive';
 import { ForwardPlusRenderer } from './renderers/forward_plus';
 import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
+import { OptimizedClusteredDeferredRenderer } from './renderers/clustered_deferred_optimized';
+import {
+    setVisibilityDebugView,
+    VisibilityBufferRenderer,
+    VisibilityDebugView,
+    visibilityDebugViews,
+} from './renderers/visibility_buffer';
 
 import { setupLoaders, Scene } from './stage/scene';
 import { Lights } from './stage/lights';
