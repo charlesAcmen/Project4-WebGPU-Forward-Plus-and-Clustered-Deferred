@@ -60,7 +60,7 @@ export const ClusterOverflowGpuLayout = {
     byteStride: 4,
 } as const;
 
-export function createCameraUniformData(): Float32Array {
+export function createCameraUniformData(): Float32Array<ArrayBuffer> {
     return new Float32Array(CameraGpuLayout.byteSize / Float32Array.BYTES_PER_ELEMENT);
 }
 // ArrayLike<number>:.length & index access
@@ -95,7 +95,7 @@ export function writeCameraClusteringParams(
     target.set([viewportWidth, viewportHeight, 1 / viewportWidth, 1 / viewportHeight], CameraGpuLayout.viewportFloatOffset);
 }
 //return Float32Array:single precision floating point array
-export function createLightRecordData(maxNumLights: number): Float32Array {
+export function createLightRecordData(maxNumLights: number): Float32Array<ArrayBuffer> {
     return new Float32Array(maxNumLights * LightGpuLayout.float32sPerLight);
 }
 
@@ -111,7 +111,7 @@ export function getLightSetByteSize(maxNumLights: number): number {
     return LightSetGpuLayout.headerByteSize + (maxNumLights * LightGpuLayout.byteStride);
 }
 
-export function createLightSetHeader(): Uint32Array {
+export function createLightSetHeader(): Uint32Array<ArrayBuffer> {
     return new Uint32Array(LightSetGpuLayout.headerByteSize / Uint32Array.BYTES_PER_ELEMENT);
 }
 
@@ -122,7 +122,7 @@ export function writeLightSetNumLights(header: Uint32Array, numLights: number): 
     header[LightSetGpuLayout.numLightsOffset] = numLights;
 }
 
-export function createClusterMetadata(clusterCount: number): Uint32Array {
+export function createClusterMetadata(clusterCount: number): Uint32Array<ArrayBuffer> {
     return new Uint32Array(clusterCount * ClusterMetadataGpuLayout.uint32sPerCluster);
 }
 
@@ -141,11 +141,11 @@ export function writeClusterMetadata(
     metadata[base + ClusterMetadataGpuLayout.candidateLightCountUint32Offset] = candidateLightCount;
 }
 
-export function createLightIndexList(lightIndexCapacity: number): Uint32Array {
+export function createLightIndexList(lightIndexCapacity: number): Uint32Array<ArrayBuffer> {
     return new Uint32Array(lightIndexCapacity * LightIndexListGpuLayout.uint32sPerLightIndex);
 }
 
-export function createClusterOverflowFlags(clusterCount: number): Uint32Array {
+export function createClusterOverflowFlags(clusterCount: number): Uint32Array<ArrayBuffer> {
     return new Uint32Array(clusterCount * ClusterOverflowGpuLayout.uint32sPerCluster);
 }
 

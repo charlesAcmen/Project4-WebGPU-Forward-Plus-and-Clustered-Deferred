@@ -81,7 +81,7 @@ export class Primitive {
         const indicesByteOffset = (indicesAccessor.byteOffset ?? 0)
             + (indicesBufferView.byteOffset ?? 0)
             + indicesBuffer.byteOffset;
-        let indicesArray: Uint32Array;
+        let indicesArray: Uint32Array<ArrayBuffer>;
         // hardcoding webgl constants, very silly
         switch (indicesDataType) {
             case 0x1403: // UNSIGNED_SHORT

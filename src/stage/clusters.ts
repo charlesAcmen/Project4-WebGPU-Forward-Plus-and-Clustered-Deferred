@@ -30,7 +30,7 @@ export class Clusters {
     readonly lightIndexStorageBuffer: GPUBuffer;
     readonly overflowStorageBuffer: GPUBuffer;
     capacityStrategy: ClusterCapacityStrategy = "fixed";
-    private readonly fixedMetadata: Uint32Array;
+    private readonly fixedMetadata: Uint32Array<ArrayBuffer>;
 
     constructor(viewportWidth: number, viewportHeight: number, config: Readonly<ClusterGridConfig> = defaultClusterGridConfig) {
         if (viewportWidth <= 0 || viewportHeight <= 0) {
@@ -86,8 +86,8 @@ export class Clusters {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
-        device.queue.writeBuffer(this.metadataStorageBuffer, 0, metadata.buffer as ArrayBuffer);
-        device.queue.writeBuffer(this.overflowStorageBuffer, 0, overflowFlags.buffer as ArrayBuffer);
+        device.queue.writeBuffer(this.metadataStorageBuffer, 0, metadata);
+        device.queue.writeBuffer(this.overflowStorageBuffer, 0, overflowFlags);
     }
 
     /**
@@ -99,7 +99,7 @@ export class Clusters {
         if (strategy === "fixed") {
             // Adaptive prefixing overwrites offsets and capacities every frame.
             // Restore fixed-stride metadata before returning to the baseline path.
-            device.queue.writeBuffer(this.metadataStorageBuffer, 0, this.fixedMetadata.buffer as ArrayBuffer);
+            device.queue.writeBuffer(this.metadataStorageBuffer, 0, this.fixedMetadata);
         }
     }
 
