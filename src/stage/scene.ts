@@ -308,6 +308,82 @@ function createSampler(gltfSampler: GLTFSampler): GPUSampler {
     return device.createSampler(samplerDescriptor);
 }
 
+/**
+ * One draw-visible instance. Object IDs identify Node x Primitive pairs rather
+ * than meshes: the same mesh can appear under multiple nodes with different
+ * model matrices, and the shading pass must be able to recover that transform.
+ */
+//Node
+// └─ Mesh
+//    └─ Primitive
+export interface VisibilityRenderItem {
+    //the ObjectID writen to visibility buffer
+    objectId: number;
+    //used for recovering model matrix/normal matrix in the shading pass
+    node: Node;
+    //used for recovering the primitive's properties in the shading pass
+    primitive: Primitive;
+}
+
+/**
+ * GPU resources shared by the Visibility Buffer geometry and compute passes.
+ * The base and packed deferred renderers do not create or consume these.
+ */
+export interface VisibilitySceneData {
+    //used in geometry pass
+    renderItems: readonly VisibilityRenderItem[];
+    //used in compute pass
+    //all primitives' vertex data concatenated into a single storage buffer
+    vertexStorageBuffer: GPUBuffer;
+    //all primitives' index data concatenated into a single storage buffer
+    indexStorageBuffer: GPUBuffer;
+    //ObjectID -> Node x Primitive mapping, including model/normal matrices and geometry offsets
+    //and material texture layer for shading.
+    objectStorageBuffer: GPUBuffer;
+    //material texture layer -> the layer
+    materialTextureArrayView: GPUTextureView;
+    //smapler strategy
+    materialSampler: GPUSampler;
+}
+//temporary struct to hold the offsets of a primitive's geometry in the concatenated storage buffers
+interface VisibilityGeometryOffsets {
+    // Both offsets are element offsets used directly by WGSL, not byte offsets.
+    // got by Object ID and Triangle ID
+    vertexFloatOffset: number;
+    indexOffset: number;
+}
+
+/**
+ * Keep this host-side ABI next to the code that writes it. The matching WGSL
+ * VisibilityObject is deliberately made self-describing: its counts let the
+ * compute pass prove that a TriangleID belongs to this particular primitive,
+ * rather than merely proving that it is somewhere inside the concatenated
+ * global index buffer.
+ * TypeScript 写入 objectStorageBuffer 的内存布局
+ *             必须等于
+ * WGSL VisibilityObject 读取时理解的内存布局
+ *
+ * Header: 8 u32 values (32 bytes)
+ * Payload: modelMat + normalMat (2 x 64 bytes)
+ * Total: 160 bytes, which is also a multiple of WGSL's 16-byte struct
+ * alignment for matrices.
+ */
+const visibilityObjectHeaderUint32Count = 8;
+const visibilityObjectFloatCount = 40;
+const visibilityVertexFloatStride = 8;
+
+// The visibility attachment reserves zero for cleared/background pixels. The
+// remaining u32 packs a 16-bit object ID and a 16-bit triangle ID. Sponza's
+// current largest primitive has 27,796 triangles, comfortably below this cap.
+const visibilityTriangleIdBits = 16;
+//[ObjectID(16 bits) | TriangleID(16 bits)]:65536 unique values
+const visibilityIdLimit = 1 << visibilityTriangleIdBits;
+
+// Every material's base-color texture is resampled to this common extent so a
+// single texture_2d_array can be indexed in the compute shader. This matches
+// the assignment's no-mipmapping allowance while keeping repeat UVs valid.
+const visibilityMaterialAtlasExtent = 1024;
+
 export class Scene {
     private root: Node = new Node();
     private visibilityMaterials: Material[] = [];
