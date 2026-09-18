@@ -81,6 +81,13 @@ export class Primitive {
     indexBuffer: GPUBuffer;
     numIndices = -1;
 
+    // These CPU arrays mirror the original GPU draw buffers. They are kept so
+    // the Visibility Buffer path can concatenate all primitives into a pair of
+    // global read-only storage buffers after glTF loading. The existing paths
+    // still use vertexBuffer/indexBuffer exactly as before.
+    readonly vertexData: Float32Array<ArrayBuffer>;
+    readonly indexData: Uint32Array<ArrayBuffer>;
+
     material: Material;
 
     constructor(gltfPrim: GLTFMeshPrimitive, gltfWithBuffers: GLTFWithBuffers, material: Material) {
