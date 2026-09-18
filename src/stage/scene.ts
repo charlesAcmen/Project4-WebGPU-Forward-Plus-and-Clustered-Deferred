@@ -10,6 +10,7 @@ import { GLTFLoader, GLTFWithBuffers, GLTFMesh, GLTFMeshPrimitive, GLTFMaterial,
 import { ImageLoader } from '@loaders.gl/images';
 import { Mat4, mat4 } from 'wgpu-matrix';
 import { device, materialBindGroupLayout, modelBindGroupLayout } from '../renderer';
+import { createModelUniformData, ModelGpuLayout, writeModelUniforms } from './gpu_layouts';
 
 export function setupLoaders() {
     registerLoaders([GLTFLoader, ImageLoader]);
@@ -178,11 +179,17 @@ export class Node {
         if (this.mesh != undefined) {
             this.modelMatUniformBuffer = device.createBuffer({
                 label: "model mat uniform",
-                size: 16 * 4,
+                size: ModelGpuLayout.byteSize,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             });
 
-            device.queue.writeBuffer(this.modelMatUniformBuffer, 0, this.transform);
+            // Positions use modelMat; normals use its inverse-transpose. This
+            // matters for glTF nodes with non-uniform scale, where applying the
+            // position matrix to a normal no longer preserves perpendicularity.
+            const modelUniforms = createModelUniformData();
+            const normalMat = mat4.transpose(mat4.inverse(this.transform));
+            writeModelUniforms(modelUniforms, this.transform, normalMat);
+            device.queue.writeBuffer(this.modelMatUniformBuffer, 0, modelUniforms);
 
             this.modelBindGroup = device.createBindGroup({
                 label: "model bind group",
