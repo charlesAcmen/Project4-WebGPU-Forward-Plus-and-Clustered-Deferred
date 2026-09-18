@@ -66,6 +66,7 @@ export async function initWebGPU() {
     context.configure({
         device: device,
         format: canvasFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.STORAGE_BINDING,
     });
 
     console.log("WebGPU init successsful");
