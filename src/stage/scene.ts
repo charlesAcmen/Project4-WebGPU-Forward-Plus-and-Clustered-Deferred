@@ -57,6 +57,7 @@ export class Material {
         this.visibilityTextureLayer = visibilityTextureLayer;
 
         const diffuseTexture = textures[gltfMaterial.pbrMetallicRoughness!.baseColorTexture!.index];
+        this.diffuseTexture = diffuseTexture;
 
         this.materialBindGroup = device.createBindGroup({
             label: "material bind group",
