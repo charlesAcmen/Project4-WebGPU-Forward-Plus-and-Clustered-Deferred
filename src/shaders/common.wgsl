@@ -35,6 +35,12 @@ struct CameraUniforms {
     viewport: vec4f,
 }
 
+struct ModelUniforms {
+    // Mirrors ModelGpuLayout: two adjacent 64-byte matrices.
+    modelMat: mat4x4f,
+    normalMat: mat4x4f,
+}
+
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius
 fn rangeAttenuation(distance: f32) -> f32 {
     //power of 4 is a good balance between smoothness and performance
