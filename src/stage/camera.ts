@@ -4,6 +4,7 @@ import { device, canvas, fovYDegrees, aspectRatio } from "../renderer";
 import {
     createCameraUniformData,
     writeCameraClusteringParams,
+    writeCameraInverseViewProjection,
     writeCameraView,
     writeCameraViewProjection,
 } from "./gpu_layouts";
@@ -22,6 +23,10 @@ class CameraUniforms {
 
     set viewMat(mat: Float32Array) {
         writeCameraView(this.floatView, mat);
+    }
+
+    set inverseViewProjMat(mat: Float32Array) {
+        writeCameraInverseViewProjection(this.floatView, mat);
     }
 
     // TODO-2: add extra functions to set values needed for light clustering here
