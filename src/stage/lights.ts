@@ -48,10 +48,14 @@ export class Lights {
     adaptiveClusterCountPipeline: GPUComputePipeline;
     adaptiveClusterPrefixPipeline: GPUComputePipeline;
     adaptiveClusterFillPipeline: GPUComputePipeline;
+    private readonly renderBudget: RenderBudget;
+    private smoothedFrameTimeMs = 0;
+    private overloadFrames = 0;
+    private lastBudgetReductionTime = Number.NEGATIVE_INFINITY;
 
     // TODO-2: add layouts, pipelines, textures, etc. needed for light clustering here
 
-    constructor(camera: Camera, clusters: Clusters) {
+    constructor(camera: Camera, clusters: Clusters, renderBudget = createRenderBudget()) {
         this.camera = camera;
         this.clusters = clusters;
         this.renderBudget = renderBudget;
