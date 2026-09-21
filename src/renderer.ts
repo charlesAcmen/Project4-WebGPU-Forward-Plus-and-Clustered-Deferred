@@ -27,26 +27,31 @@ export async function initWebGPU() {
     //as:type assertion
     canvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
 
-    const devicePixelRatio = window.devicePixelRatio;
-    canvas.width = canvas.clientWidth * devicePixelRatio;
-    canvas.height = canvas.clientHeight * devicePixelRatio;
-
-    aspectRatio = canvas.width / canvas.height;
+    // This query flag is intentionally available in both dev and release. It
+    // verifies that a public deployment can display the same explanatory UI
+    // without needing to disable WebGPU on the test device.
+    if (new URLSearchParams(window.location.search).get('webgpu-overlay') === '1') {
+        showWebGpuStatusOverlay(
+            'WebGPU 诊断提示',
+            '这是手动触发的诊断遮罩；页面的 WebGPU 初始化仍会在后台继续。',
+        );
+    }
 
     if (!navigator.gpu)
     {
-        let errorMessageElement = document.createElement("h1");
-        errorMessageElement.textContent = "This browser doesn't support WebGPU! Try using Google Chrome.";
-        errorMessageElement.style.paddingLeft = '0.4em';
-        document.body.innerHTML = '';
-        document.body.appendChild(errorMessageElement);
-        throw new Error("WebGPU not supported on this browser");
+        failWebGpuInitialization('浏览器没有提供 WebGPU 接口。');
     }
 
-    const adapter = await navigator.gpu.requestAdapter();
+    let adapter: GPUAdapter | null;
+    try {
+        adapter = await navigator.gpu.requestAdapter();
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        failWebGpuInitialization(`无法请求 WebGPU 图形适配器：${detail}`);
+    }
     if (!adapter)
     {
-        throw new Error("no appropriate GPUAdapter found");
+        failWebGpuInitialization('没有找到可用的 WebGPU 图形适配器。');
     }
 
     // Visibility Buffer support is optional: request the feature when the
@@ -54,20 +59,43 @@ export async function initWebGPU() {
     // running on an adapter that does not. The visibility renderer itself
     // performs the corresponding user-facing availability check.
     supportsPrimitiveIndex = adapter.features.has("primitive-index");
-    device = await adapter.requestDevice({
-        requiredFeatures: supportsPrimitiveIndex ? ["primitive-index"] : [],
+    try {
+        device = await adapter.requestDevice({
+            requiredFeatures: supportsPrimitiveIndex ? ["primitive-index"] : [],
+        });
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        failWebGpuInitialization(`无法创建 WebGPU 设备：${detail}`);
+    }
+
+    // Pipeline/attachment validation and device loss can happen after a
+    // successful adapter request. Surface their browser-provided reason on a
+    // deployed page instead of leaving a black canvas with console-only clues.
+    device.addEventListener('uncapturederror', event => {
+        showWebGpuStatusOverlay('WebGPU 渲染错误', event.error.message);
+    });
+    void device.lost.then(info => {
+        showWebGpuStatusOverlay(
+            'WebGPU 设备已丢失',
+            info.message || `设备丢失原因：${info.reason}`,
+        );
     });
 
-    context = canvas.getContext("webgpu")!;
+    const canvasContext = canvas.getContext("webgpu");
+    if (!canvasContext) {
+        failWebGpuInitialization('浏览器无法创建 WebGPU 画布上下文。');
+    }
+    context = canvasContext;
     // The compute lighting pass writes the present texture directly. rgba8unorm
     // is a core write-only storage-texture format, unlike bgra8unorm which needs
     // the optional bgra8unorm-storage feature on some adapters.
     canvasFormat = "rgba8unorm";
-    context.configure({
-        device: device,
-        format: canvasFormat,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.STORAGE_BINDING,
-    });
+    try {
+        resizeCanvasToDisplaySize();
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        failWebGpuInitialization(`无法配置 WebGPU 画布：${detail}`);
+    }
 
     console.log("WebGPU init successsful");
     console.log(`Visibility Buffer primitive-index support: ${supportsPrimitiveIndex}`);
