@@ -489,6 +489,8 @@ Naive 可作为低 light count reference，但高 light count 可能触发极慢
 
 ### 3.3 Benchmark state machine
 
+**Excluded by user decision.** Do not implement an automatic scenario runner.
+
 文件：`benchmark.ts`。
 
 目标：apply -> warmup -> sample -> diagnostic -> repeat，无手工抄数。
@@ -496,6 +498,8 @@ Naive 可作为低 light count reference，但高 light count 可能触发极慢
 验收：先只跑两个小 scenario；切换期样本不会进入 measurement。
 
 ### 3.4 JSON/CSV export
+
+**Excluded by user decision.** Do not implement raw-data export.
 
 文件：`export_results.ts`。
 
@@ -539,15 +543,11 @@ Naive 可作为低 light count reference，但高 light count 可能触发极慢
 
 `npm run build` 或 Vite transform 只能证明打包/type-level 状态，不能证明 WGSL runtime compilation、视觉正确性或 GPU timing 正确。每个实现阶段都应分别报告 static/build、runtime validation、visual acceptance 和 measurement evidence。
 
-## 12. 第一轮实施建议
+## 12. 当前实现与证据边界
 
-Performance implementation 当前暂停。恢复前先完成以下 prerequisites：
+1.1–1.3、2.1–2.4、3.1–3.2 的测量入口已接入代码；3.3 自动 runner 与 3.4 JSON/CSV 导出按用户决定排除。2.5 的 profiler off / timestamp only / timestamp + Overlay 开关已接入，但实际 observer-effect 差异仍须在目标浏览器和 GPU 上测量。第 4 节的性能图表与结论也不能在没有真实样本时生成。
 
-1. Packed Deferred 与 Visibility Buffer 在浏览器中通过 WGSL/runtime validation；
-2. final/debug views 完成视觉验收；
-3. 当前 bind-group/material-binding 优化被接受为稳定 baseline。
-
-恢复 profiling 时只做 **1.1：pure rolling statistics**，随后按 `1.2 -> 1.3 -> 2.1` 前进。不要同时实现 Overlay、GPU timestamps 和 benchmark runner。
+Packed Deferred 与 Visibility Buffer 的 WGSL/runtime validation、final/debug 视觉验收，以及 timestamp-query readback 的目标设备验收仍需在浏览器完成。静态构建不替代这些检查。手动测量协议见 `docs/performance/methodology.md`。
 
 ## References
 
