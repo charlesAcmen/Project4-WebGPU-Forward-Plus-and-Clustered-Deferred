@@ -3,6 +3,7 @@ import { GUI } from 'dat.gui';
 
 import {
     canvas,
+    device,
     initWebGPU,
     Renderer,
     resizeCanvasToDisplaySize,
@@ -22,11 +23,12 @@ import {
 
 import { setupLoaders, Scene } from './stage/scene';
 import { Lights } from './stage/lights';
-import { Camera } from './stage/camera';
+import { Camera, sponzaStartPose } from './stage/camera';
 import { Clusters, ClusterCapacityStrategy } from './stage/clusters';
 import { Stage } from './stage/stage';
 import { installOverlayLayout } from './ui/overlay_layout';
 import { PerformanceProfiler } from './performance/profiler';
+import { PerformanceOverlay } from './performance/overlay';
 //void:discard Promised return,Promise<void>
 //IIFE: Immediately Invoked Function Expression to allow async/await at the top level
 void (async () => {
@@ -51,6 +53,7 @@ gui.domElement.classList.add('renderer-controls');
 installOverlayLayout(gui);
 const lightCountController = gui.add(lights, 'numLights').min(1).max(lights.maxRuntimeLights).step(1).onChange(() => {
     lights.updateLightSetUniformNumLights();
+    profiler.resetForExternalChange();
 });
 
 clusters.setCapacityStrategy('adaptive');
@@ -61,6 +64,7 @@ const clusterStrategies = {
 };
 gui.add(clusterStrategyState, "strategy", clusterStrategies).onChange((strategy: ClusterCapacityStrategy) => {
     clusters.setCapacityStrategy(strategy);
+    profiler.resetForExternalChange();
 });
 
 // This selector does not switch renderer pipelines. It changes only a tiny
@@ -69,10 +73,37 @@ gui.add(clusterStrategyState, "strategy", clusterStrategies).onChange((strategy:
 const visibilityDebugState = { view: visibilityDebugViews.finalLighting };
 gui.add(visibilityDebugState, 'view', visibilityDebugViews).name('visibility debug').onChange((view: VisibilityDebugView) => {
     setVisibilityDebugView(view);
+    profiler.resetForExternalChange();
 });
 
 const stage = new Stage(scene, lights, camera, clusters, stats);
 const profiler = new PerformanceProfiler();
+profiler.enableGpuTiming(device);
+const performanceOverlay = new PerformanceOverlay(profiler, canvas);
+const profilingState = { mode: 'timestamp + overlay' };
+gui.add(profilingState, 'mode', ['off', 'timestamp only', 'timestamp + overlay'])
+    .name('profiling')
+    .onChange((mode: string) => {
+        profiler.setEnabled(mode !== 'off');
+        performanceOverlay.setVisible(mode === 'timestamp + overlay');
+    });
+gui.add({
+    captureClusters: () => {
+        if (activeRenderMode === renderModes.naive) {
+            console.info('Naive mode does not build cluster lists.');
+            return;
+        }
+        void profiler.captureClusterDiagnostics(clusters)
+            .then(snapshot => {
+                if (snapshot) performanceOverlay.showClusterDiagnostics(snapshot);
+            })
+            .catch(error => console.error('Cluster snapshot failed:', error));
+    },
+}, 'captureClusters').name('cluster snapshot');
+gui.add({ resetCamera: () => {
+    camera.applyPose(sponzaStartPose);
+    profiler.resetForExternalChange();
+} }, 'resetCamera').name('reset camera preset');
 
 var renderer: Renderer | undefined;
 let activeRenderMode = '';
@@ -150,6 +181,8 @@ const scheduleRendererResize = () => {
         if (!resizeCanvasToDisplaySize()) {
             return;
         }
+
+        profiler.resetForExternalChange();
 
         // Update all size-dependent resources in one transaction so no renderer
         // can draw with a stale projection or cluster layout.
