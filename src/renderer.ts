@@ -5,6 +5,7 @@ import { Clusters } from './stage/clusters';
 import { Stage } from './stage/stage';
 import { createRenderBudget } from './stage/render_budget';
 import { PerformanceProfiler } from './performance/profiler';
+import { GpuFrameRecorder } from './performance/gpu_timer';
 
 export var canvas: HTMLCanvasElement;
 export var canvasFormat: GPUTextureFormat;
@@ -17,6 +18,7 @@ export var canvasTextureView: GPUTextureView;
 // current indexed draw directly in its fragment shader. Keeping the result
 // here lets the GUI leave the other render paths usable on older adapters.
 export var supportsPrimitiveIndex = false;
+export var supportsTimestampQuery = false;
 
 export var aspectRatio: number;
 export const fovYDegrees = 45;
@@ -146,9 +148,13 @@ export async function initWebGPU() {
     // running on an adapter that does not. The visibility renderer itself
     // performs the corresponding user-facing availability check.
     supportsPrimitiveIndex = adapter.features.has("primitive-index");
+    supportsTimestampQuery = adapter.features.has('timestamp-query');
     try {
         device = await adapter.requestDevice({
-            requiredFeatures: supportsPrimitiveIndex ? ["primitive-index"] : [],
+            requiredFeatures: [
+                ...(supportsPrimitiveIndex ? ['primitive-index' as const] : []),
+                ...(supportsTimestampQuery ? ['timestamp-query' as const] : []),
+            ],
         });
     } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
