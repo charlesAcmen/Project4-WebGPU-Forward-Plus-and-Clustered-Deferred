@@ -1,7 +1,14 @@
 import Stats from 'stats.js';
 import { GUI } from 'dat.gui';
 
-import { canvas, initWebGPU, Renderer, supportsPrimitiveIndex } from './renderer';
+import {
+    canvas,
+    initWebGPU,
+    Renderer,
+    resizeCanvasToDisplaySize,
+    showWebGpuStatusOverlay,
+    supportsPrimitiveIndex,
+} from './renderer';
 import { NaiveRenderer } from './renderers/naive';
 import { ForwardPlusRenderer } from './renderers/forward_plus';
 import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
@@ -20,7 +27,9 @@ import { Clusters, ClusterCapacityStrategy } from './stage/clusters';
 import { Stage } from './stage/stage';
 import { installOverlayLayout } from './ui/overlay_layout';
 import { PerformanceProfiler } from './performance/profiler';
-
+//void:discard Promised return,Promise<void>
+//IIFE: Immediately Invoked Function Expression to allow async/await at the top level
+void (async () => {
 await initWebGPU();
 setupLoaders();
 
