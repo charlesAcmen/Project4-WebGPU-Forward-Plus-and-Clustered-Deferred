@@ -328,14 +328,16 @@ export class VisibilityBufferRenderer extends renderer.Renderer {
     // 4. submit
     override draw(): void {
         const encoder = renderer.device.createCommandEncoder({ label: 'Visibility Buffer command encoder' });
+        const gpuFrame = this.beginGpuFrame();
 
         // The same cluster list is produced before either packed or visibility
         // shading. Visibility changes geometry/material bandwidth, not light
         // culling policy or overflow behavior.
-        this.lights.doLightClustering(encoder);
+        this.lights.doLightClustering(encoder, gpuFrame);
 
         const geometryPass = encoder.beginRenderPass({
             label: 'Visibility Buffer geometry pass',
+            timestampWrites: gpuFrame?.pass('visibility_geometry'),
             colorAttachments: [{
                 view: this.resources.visibilityTextureView,
                 clearValue: [0, 0, 0, 0],
@@ -388,7 +390,10 @@ export class VisibilityBufferRenderer extends renderer.Renderer {
             entries: [{ binding: 0, resource: outputTextureView }],
         });
 
-        const lightingPass = encoder.beginComputePass({ label: 'Visibility Buffer compute shading pass' });
+        const lightingPass = encoder.beginComputePass({
+            label: 'Visibility Buffer compute shading pass',
+            timestampWrites: gpuFrame?.pass('visibility_lighting_compute'),
+        });
         lightingPass.setPipeline(this.resources.lightingComputePipeline);
         lightingPass.setBindGroup(shaders.constants.bindGroup_scene, this.resources.lightingSceneBindGroup);
         lightingPass.setBindGroup(1, lightingOutputBindGroup);
@@ -399,6 +404,6 @@ export class VisibilityBufferRenderer extends renderer.Renderer {
         );
         lightingPass.end();
 
-        renderer.device.queue.submit([encoder.finish()]);
+        this.submitFrame(encoder, gpuFrame);
     }
 }

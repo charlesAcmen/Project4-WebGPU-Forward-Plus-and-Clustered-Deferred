@@ -191,12 +191,14 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
         // - run the G-buffer pass, outputting position, albedo, and normals
         // - run the fullscreen pass, which reads from the G-buffer and performs lighting calculations
         const encoder = renderer.device.createCommandEncoder({ label: "Clustered Deferred command encoder" });
+        const gpuFrame = this.beginGpuFrame();
         //step 1: run the clustering compute shader to calculate which lights affect which clusters
-        this.lights.doLightClustering(encoder);
+        this.lights.doLightClustering(encoder, gpuFrame);
 
         //step 2: run the G-buffer pass, outputting position, albedo, and normals
         const gBufferPass = encoder.beginRenderPass({
             label: "Clustered Deferred G-buffer pass",
+            timestampWrites: gpuFrame?.pass('gbuffer_geometry'),
             colorAttachments: [
                 { view: this.resources.positionTextureView, clearValue: [0, 0, 0, 0], loadOp: "clear", storeOp: "store" },
                 { view: this.resources.albedoTextureView, clearValue: [0, 0, 0, 0], loadOp: "clear", storeOp: "store" },
@@ -226,6 +228,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
         //step 3: run the fullscreen pass, which reads from the G-buffer and performs lighting calculations
         const fullscreenPass = encoder.beginRenderPass({
             label: "Clustered Deferred fullscreen pass",
+            timestampWrites: gpuFrame?.pass('deferred_lighting_fullscreen'),
             colorAttachments: [{
                 view: canvasTextureView,
                 clearValue: [0, 0, 0, 0],
@@ -238,7 +241,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
         fullscreenPass.draw(3);
         fullscreenPass.end();
 
-        renderer.device.queue.submit([encoder.finish()]);
+        this.submitFrame(encoder, gpuFrame);
     }
 
 }

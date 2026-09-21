@@ -97,6 +97,7 @@ export class NaiveRenderer extends renderer.Renderer {
 
     override draw() {
         const encoder = renderer.device.createCommandEncoder();
+        const gpuFrame = this.beginGpuFrame();
         //createView()：what's inside a 3d texutre is complex,cube map layers,8 layers of mipmap，etc.
         //this func defaults the format,layer,level
         const canvasTextureView = renderer.context.getCurrentTexture().createView();
@@ -104,6 +105,7 @@ export class NaiveRenderer extends renderer.Renderer {
         const renderPass = encoder.beginRenderPass({
             //tile memory/On-Chip SRAM
             label: "naive render pass",
+            timestampWrites: gpuFrame?.pass('forward_shading'),
             colorAttachments: [
                 {
                     view: canvasTextureView,
@@ -136,6 +138,6 @@ export class NaiveRenderer extends renderer.Renderer {
 
         renderPass.end();
 
-        renderer.device.queue.submit([encoder.finish()]);
+        this.submitFrame(encoder, gpuFrame);
     }
 }

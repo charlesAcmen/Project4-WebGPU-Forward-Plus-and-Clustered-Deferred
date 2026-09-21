@@ -118,12 +118,14 @@ export class ForwardPlusRenderer extends renderer.Renderer {
     override draw() {
         // TODO-2: run the Forward+ rendering pass:
         const encoder = renderer.device.createCommandEncoder({ label: "Forward+ command encoder" });
+        const gpuFrame = this.beginGpuFrame();
         // - run the clustering compute shader
-        this.lights.doLightClustering(encoder);
+        this.lights.doLightClustering(encoder, gpuFrame);
 
         const canvasTextureView = renderer.context.getCurrentTexture().createView();
         const renderPass = encoder.beginRenderPass({
             label: "Forward+ render pass",
+            timestampWrites: gpuFrame?.pass('forward_shading'),
             colorAttachments: [{
                 view: canvasTextureView,
                 clearValue: [0, 0, 0, 0],
@@ -150,6 +152,6 @@ export class ForwardPlusRenderer extends renderer.Renderer {
         });
         renderPass.end();
         // - run the main rendering pass, using the computed clusters for efficient lighting
-        renderer.device.queue.submit([encoder.finish()]);
+        this.submitFrame(encoder, gpuFrame);
     }
 }

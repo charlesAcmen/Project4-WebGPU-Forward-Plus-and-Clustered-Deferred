@@ -168,13 +168,15 @@ export class OptimizedClusteredDeferredRenderer extends renderer.Renderer {
 
     override draw() {
         const encoder = renderer.device.createCommandEncoder({ label: 'Packed clustered deferred command encoder' });
+        const gpuFrame = this.beginGpuFrame();
 
         // Clustering is unchanged. Only the G-buffer representation and its
         // fullscreen consumer differ from the retained base renderer.
-        this.lights.doLightClustering(encoder);
+        this.lights.doLightClustering(encoder, gpuFrame);
 
         const gBufferPass = encoder.beginRenderPass({
             label: 'Packed deferred single-color G-buffer pass',
+            timestampWrites: gpuFrame?.pass('gbuffer_geometry'),
             colorAttachments: [{
                 view: this.resources.packedMaterialTextureView,
                 clearValue: [0, 0, 0, 0],
@@ -210,7 +212,10 @@ export class OptimizedClusteredDeferredRenderer extends renderer.Renderer {
             entries: [{ binding: 0, resource: outputTextureView }],
         });
 
-        const lightingPass = encoder.beginComputePass({ label: 'Packed deferred lighting compute pass' });
+        const lightingPass = encoder.beginComputePass({
+            label: 'Packed deferred lighting compute pass',
+            timestampWrites: gpuFrame?.pass('deferred_lighting_compute'),
+        });
         lightingPass.setPipeline(this.resources.lightingComputePipeline);
         lightingPass.setBindGroup(shaders.constants.bindGroup_scene, this.resources.lightingSceneBindGroup);
         lightingPass.setBindGroup(1, lightingOutputBindGroup);
@@ -221,6 +226,6 @@ export class OptimizedClusteredDeferredRenderer extends renderer.Renderer {
         );
         lightingPass.end();
 
-        renderer.device.queue.submit([encoder.finish()]);
+        this.submitFrame(encoder, gpuFrame);
     }
 }
