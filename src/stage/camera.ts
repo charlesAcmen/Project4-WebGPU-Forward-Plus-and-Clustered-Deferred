@@ -8,6 +8,18 @@ import {
     writeCameraView,
     writeCameraViewProjection,
 } from "./gpu_layouts";
+
+export interface CameraPose {
+    position: readonly [number, number, number];
+    yaw: number;
+    pitch: number;
+}
+
+export const sponzaStartPose: CameraPose = {
+    position: [-7, 2, 0],
+    yaw: 0,
+    pitch: 0,
+};
 //CPU side representation of the camera uniforms
 class CameraUniforms {
     //readonly:can not be modified after initialization
@@ -112,6 +124,14 @@ export class Camera {
     /** Rebuild the projection whenever renderer.ts changes the drawing size. */
     resizeProjection(): void {
         this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
+    }
+
+    applyPose(pose: CameraPose): void {
+        this.cameraPos = vec3.create(...pose.position);
+        this.yaw = pose.yaw;
+        this.pitch = pose.pitch;
+        this.keys = {};
+        this.rotateCamera(0, 0);
     }
 
     private onKeyEvent(event: KeyboardEvent, down: boolean) {
