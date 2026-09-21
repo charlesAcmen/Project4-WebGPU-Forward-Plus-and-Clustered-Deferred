@@ -18,6 +18,8 @@ import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
 import { Clusters, ClusterCapacityStrategy } from './stage/clusters';
 import { Stage } from './stage/stage';
+import { installOverlayLayout } from './ui/overlay_layout';
+import { PerformanceProfiler } from './performance/profiler';
 
 await initWebGPU();
 setupLoaders();
@@ -26,7 +28,7 @@ let scene = new Scene();
 await scene.loadGltf('./scenes/sponza/Sponza.gltf');
 
 const camera = new Camera();
-const clusters = new Clusters(canvas.width, canvas.height);
+let clusters = new Clusters(canvas.width, canvas.height);
 const lights = new Lights(camera, clusters);
 
 const stats = new Stats();
@@ -38,6 +40,7 @@ gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(()
     lights.updateLightSetUniformNumLights();
 });
 
+clusters.setCapacityStrategy('adaptive');
 const clusterStrategyState = { strategy: clusters.capacityStrategy };
 const clusterStrategies = {
     fixed: "fixed",
