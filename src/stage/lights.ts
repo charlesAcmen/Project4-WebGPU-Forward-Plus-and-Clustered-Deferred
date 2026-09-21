@@ -293,7 +293,8 @@ export class Lights {
     }
 
     // CHECKITOUT: this is where the light movement compute shader is dispatched from the host
-    onFrame(time: number) {
+    onFrame(time: number, frameTimeMs: number) {
+        this.applyReleaseFrameBudget(time, frameTimeMs);
         device.queue.writeBuffer(this.timeUniformBuffer, 0, new Float32Array([time]));
 
         // not using same encoder as render pass so this doesn't interfere with measuring actual rendering performance
@@ -310,5 +311,40 @@ export class Lights {
         computePass.end();
 
         device.queue.submit([encoder.finish()]);
+    }
+
+    private applyReleaseFrameBudget(time: number, frameTimeMs: number): void {
+        if (!this.renderBudget.enforced || !Number.isFinite(frameTimeMs) || frameTimeMs <= 0) {
+            return;
+        }
+
+        // Smooth the frame time to avoid reacting to a single hiccup. 
+        this.smoothedFrameTimeMs = this.smoothedFrameTimeMs === 0
+            ? frameTimeMs
+            : this.smoothedFrameTimeMs * 0.85 + frameTimeMs * 0.15;
+        this.overloadFrames = this.smoothedFrameTimeMs > this.renderBudget.targetFrameTimeMs
+        //self increment overloadFrames if the device is overloaded, otherwise reset to 0    
+        ? this.overloadFrames + 1
+            // If the device is not overloaded, reset the overload frame count.
+            : 0;
+
+        // Frame pacing is only a warning signal, not a GPU timer. Three bad
+        // frames plus a cooldown avoids reacting to a single tab/background hiccup.
+        if (this.overloadFrames < 3 || time - this.lastBudgetReductionTime < 1000 || this.numLights <= this.renderBudget.minimumLightCount) {
+            return;
+        }
+
+        const nextCount = Math.max(
+            this.renderBudget.minimumLightCount,
+            Math.floor(this.numLights * 0.75),
+        );
+        if (nextCount < this.numLights) {
+            this.numLights = nextCount;
+            // Sync to GPU
+            this.updateLightSetUniformNumLights();
+            this.lastBudgetReductionTime = time;
+            this.overloadFrames = 0;
+            console.warn(`Release frame budget reduced lights to ${nextCount}.`);
+        }
     }
 }
