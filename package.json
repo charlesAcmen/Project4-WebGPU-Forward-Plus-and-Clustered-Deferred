@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --open",
-    "build": "vite build && cp -r scenes/ dist/"
+    "build": "vite build && node scripts/copy-scenes.mjs"
   },
   "devDependencies": {
     "@types/dat.gui": "^0.7.13",
