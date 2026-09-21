@@ -124,6 +124,12 @@ const renderModes = {
     clusteredDeferredOptimized: 'clustered deferred (packed compute)',
     visibilityBuffer: 'visibility buffer (compute reconstruction)',
 };
+const defaultRenderMode = supportsPrimitiveIndex
+    ? renderModes.visibilityBuffer
+    // primitive-index is the only optional feature required by the visibility
+    // path. Without it, prefer the packed clustered-deferred implementation
+    // as the default bandwidth-oriented fallback; Forward+ remains selectable.
+    : renderModes.clusteredDeferredOptimized;
 let renderModeController = gui.add({ mode: renderModes.naive }, 'mode', renderModes);
 renderModeController.onChange(setRenderer);
 
