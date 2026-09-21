@@ -24,14 +24,15 @@ function isTouchClassDevice(): boolean {
 
 export function createRenderBudget(): RenderBudget {
     if (import.meta.env.DEV) {
-        // Development builds do not enforce a render budget
+        // Keep the 5000-light stress range, but retain the same overload
+        // safety valve as release builds so an accidental extreme setting
+        // cannot leave the development tab unresponsive indefinitely.
         return {
-            enforced: false,
+            enforced: true,
             initialLightCount: 500,
             maxLightCount: 5000,
             minimumLightCount: 1,
-            //No Timeout Detection and recovery
-            targetFrameTimeMs: Number.POSITIVE_INFINITY,
+            targetFrameTimeMs: 45,
             maxDevicePixelRatio: Number.POSITIVE_INFINITY,
         };
     }
