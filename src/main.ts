@@ -134,3 +134,54 @@ let renderModeController = gui.add({ mode: defaultRenderMode }, 'mode', renderMo
 renderModeController.onChange(setRenderer);
 
 setRenderer(renderModeController.getValue());
+
+// Mobile rotation and dynamic browser chrome change the CSS canvas size after
+// startup. Keep the drawing buffer, projection, cluster storage, and all
+// size-dependent attachments as one transaction so no path can render an old
+// portrait texture into a new landscape canvas.
+let resizeRequestId: number | undefined;
+const scheduleRendererResize = () => {
+    if (resizeRequestId !== undefined) {
+    //wrap all resizing into a single requestAnimationFrame to avoid multiple resizes in a single frame
+        return;
+    }
+    resizeRequestId = requestAnimationFrame(() => {
+        resizeRequestId = undefined;
+        if (!resizeCanvasToDisplaySize()) {
+            return;
+        }
+
+        // Update all size-dependent resources in one transaction so no renderer
+        // can draw with a stale projection or cluster layout.
+        camera.resizeProjection();
+        const previousStrategy = clusters.capacityStrategy;
+        clusters = new Clusters(canvas.width, canvas.height);
+        clusters.setCapacityStrategy(previousStrategy);
+        lights.setClusters(clusters);
+        stage.clusters = clusters;
+        setRenderer(activeRenderMode);
+    });
+};
+
+// ResizeObserver covers CSS changes such as 100dvh; the viewport listeners
+// cover rotation and mobile browser-chrome transitions where layout changes
+// before the canvas observer is delivered.
+new ResizeObserver(scheduleRendererResize).observe(canvas);
+window.addEventListener('resize', scheduleRendererResize, { passive: true });
+window.addEventListener('orientationchange', scheduleRendererResize, { passive: true });
+window.visualViewport?.addEventListener('resize', scheduleRendererResize, { passive: true });
+window.addEventListener('webgpu-canvas-resize-needed', scheduleRendererResize);
+
+// The governor can lower numLights asynchronously after sustained
+// overload. Refreshing this controller keeps the displayed value truthful.
+window.setInterval(() => lightCountController.updateDisplay(), 250);
+})().catch((error: unknown) => {
+    const reason = error instanceof Error ? error.message : String(error);
+    // initWebGPU already provides the more specific unsupported-device title.
+    // Loading or renderer setup failures use the same visible diagnostic UI
+    // instead of failing silently on a public page.
+    if (!document.getElementById('webgpu-status-overlay')) {
+        showWebGpuStatusOverlay('渲染器无法启动', reason);
+    }
+    console.error('Renderer startup failed:', error);
+});
