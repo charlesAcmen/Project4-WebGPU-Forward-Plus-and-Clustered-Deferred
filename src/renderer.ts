@@ -246,6 +246,7 @@ export abstract class Renderer {
 
     private prevTime: number = 0;
     private frameRequestId: number;
+    private lastResizeSafetyCheckTime = Number.NEGATIVE_INFINITY;
 
     constructor(stage: Stage) {
         this.scene = stage.scene;
@@ -265,6 +266,18 @@ export abstract class Renderer {
 
     // CHECKITOUT: this is the main rendering loop
     private onFrame(time: number) {
+        // Avoid reading layout every frame. ResizeObserver and viewport events
+        // drive the normal path; this low-frequency probe catches a delayed
+        // mobile rotation notification that otherwise leaves stale resources.
+        if (time - this.lastResizeSafetyCheckTime >= resizeSafetyCheckIntervalMs) {
+            this.lastResizeSafetyCheckTime = time;
+            if (canvasNeedsResize()) {
+                window.dispatchEvent(new Event('webgpu-canvas-resize-needed'));
+                this.frameRequestId = requestAnimationFrame((t) => this.onFrame(t));
+                return;
+            }
+        }
+
         if (this.prevTime == 0) {
             this.prevTime = time;
         }
