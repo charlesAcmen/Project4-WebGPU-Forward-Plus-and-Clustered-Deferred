@@ -42,10 +42,14 @@ const lights = new Lights(camera, clusters);
 
 const stats = new Stats();
 stats.showPanel(0);
+stats.dom.classList.add('renderer-stats-overlay');
 document.body.appendChild(stats.dom);
 
 const gui = new GUI();
-gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(() => {
+// dat.GUI uses native select controls, so taps open the platform picker on touch devices.
+gui.domElement.classList.add('renderer-controls');
+installOverlayLayout(gui);
+const lightCountController = gui.add(lights, 'numLights').min(1).max(lights.maxRuntimeLights).step(1).onChange(() => {
     lights.updateLightSetUniformNumLights();
 });
 
