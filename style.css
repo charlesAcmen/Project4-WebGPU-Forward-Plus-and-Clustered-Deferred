@@ -59,6 +59,36 @@ html, body {
     font-size: var(--overlay-font-size);
 }
 
+.performance-overlay {
+    position: fixed;
+    top: calc(52px * var(--overlay-stats-scale));
+    left: 8px;
+    z-index: 12;
+    max-width: min(440px, calc(100vw - 16px));
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid rgb(190 220 255 / 40%);
+    border-radius: 6px;
+    color: #eff8ff;
+    background: rgb(5 12 25 / 82%);
+    font: 12px/1.45 ui-monospace, Consolas, monospace;
+    pointer-events: auto;
+}
+
+.performance-overlay[hidden] {
+    display: none;
+}
+
+.performance-overlay summary {
+    cursor: pointer;
+}
+
+.performance-overlay pre {
+    margin: 6px 0 0;
+    white-space: pre-wrap;
+    font: inherit;
+}
+
 .webgpu-unsupported-overlay {
     position: fixed;
     inset: 0;
@@ -95,6 +125,13 @@ html, body {
 }
 
 @media (pointer: coarse), (max-width: 768px) {
+    .performance-overlay {
+        top: auto;
+        bottom: 8px;
+        max-height: 45vh;
+        overflow: auto;
+    }
+
     .webgpu-unsupported-panel {
         padding: 28px 22px;
     }
