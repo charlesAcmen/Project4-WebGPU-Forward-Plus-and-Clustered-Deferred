@@ -14,6 +14,7 @@ import {
     writeLightSetNumLights,
 } from "./gpu_layouts";
 import { RenderBudget, createRenderBudget } from "./render_budget";
+import type { GpuFrameRecorder } from '../performance/gpu_timer';
 
 // h in [0, 1]
 function hueToRgb(h: number) {
@@ -251,15 +252,18 @@ export class Lights {
         });
     }
 
-    doLightClustering(encoder: GPUCommandEncoder) {
+    doLightClustering(encoder: GPUCommandEncoder, gpuFrame?: GpuFrameRecorder) {
         // TODO-2: run the light clustering compute pass(es) here
         // implementing clustering here allows for reusing the code in both Forward+ and Clustered Deferred
         if (this.clusters.capacityStrategy === "adaptive") {
-            this.doAdaptiveLightClustering(encoder);
+            this.doAdaptiveLightClustering(encoder, gpuFrame);
             return;
         }
 
-        const computePass = encoder.beginComputePass({ label: "light clustering compute pass" });
+        const computePass = encoder.beginComputePass({
+            label: "light clustering compute pass",
+            timestampWrites: gpuFrame?.pass('cluster_fixed'),
+        });
         computePass.setPipeline(this.lightClusteringComputePipeline);
         computePass.setBindGroup(0, this.lightClusteringBindGroup);
         const workgroupCount = Math.ceil(this.clusters.dimensions.clusterCount / shaders.constants.clusteringWorkgroupSize);
@@ -267,25 +271,34 @@ export class Lights {
         computePass.end();
     }
 
-    private doAdaptiveLightClustering(encoder: GPUCommandEncoder): void {
+    private doAdaptiveLightClustering(encoder: GPUCommandEncoder, gpuFrame?: GpuFrameRecorder): void {
         const clusterWorkgroupCount = Math.ceil(
             this.clusters.dimensions.clusterCount / shaders.constants.clusteringWorkgroupSize,
         );
 
-        const countPass = encoder.beginComputePass({ label: "adaptive cluster count pass" });
+        const countPass = encoder.beginComputePass({
+            label: "adaptive cluster count pass",
+            timestampWrites: gpuFrame?.pass('cluster_adaptive_count'),
+        });
         countPass.setPipeline(this.adaptiveClusterCountPipeline);
         countPass.setBindGroup(0, this.lightClusteringBindGroup);
         countPass.dispatchWorkgroups(clusterWorkgroupCount);
         countPass.end();
 
         // A separate pass makes all cluster counts visible to the serial prefix pass.
-        const prefixPass = encoder.beginComputePass({ label: "adaptive cluster prefix pass" });
+        const prefixPass = encoder.beginComputePass({
+            label: "adaptive cluster prefix pass",
+            timestampWrites: gpuFrame?.pass('cluster_adaptive_prefix'),
+        });
         prefixPass.setPipeline(this.adaptiveClusterPrefixPipeline);
         prefixPass.setBindGroup(0, this.lightClusteringBindGroup);
         prefixPass.dispatchWorkgroups(1);
         prefixPass.end();
 
-        const fillPass = encoder.beginComputePass({ label: "adaptive cluster fill pass" });
+        const fillPass = encoder.beginComputePass({
+            label: "adaptive cluster fill pass",
+            timestampWrites: gpuFrame?.pass('cluster_adaptive_fill'),
+        });
         fillPass.setPipeline(this.adaptiveClusterFillPipeline);
         fillPass.setBindGroup(0, this.lightClusteringBindGroup);
         fillPass.dispatchWorkgroups(clusterWorkgroupCount);
