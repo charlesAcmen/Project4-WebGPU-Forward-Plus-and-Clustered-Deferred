@@ -73,6 +73,12 @@ export class Camera {
 
     //equivalent to std::unordered_map<string, boolean> keys in C++
     keys: { [key: string]: boolean } = {};
+    // Pointer Lock has no touch equivalent. Keep the active finger and its
+    // previous CSS-pixel position so a one-finger drag can use the same
+    // relative yaw/pitch update as desktop mouse movement.
+    private activeTouchPointerId: number | undefined;
+    private lastTouchX = 0;
+    private lastTouchY = 0;
 
     constructor () {
         // TODO-1.1: set `this.uniformsBuffer` to a new buffer of size `this.uniforms.buffer.byteLength`
@@ -96,9 +102,16 @@ export class Camera {
         window.addEventListener('keyup', (event) => this.onKeyEvent(event, false));
         window.onblur = () => this.keys = {}; // reset keys on page exit so they don't get stuck (e.g. on alt + tab)
 
-        canvas.addEventListener('mousedown', () => canvas.requestPointerLock());
-        canvas.addEventListener('mouseup', () => document.exitPointerLock());
-        canvas.addEventListener('mousemove', (event) => this.onMouseMove(event));
+        canvas.addEventListener('pointerdown', (event) => this.onPointerDown(event), { passive: false });
+        canvas.addEventListener('pointermove', (event) => this.onPointerMove(event), { passive: false });
+        canvas.addEventListener('pointerup', (event) => this.onPointerUp(event));
+        canvas.addEventListener('pointercancel', (event) => this.onPointerUp(event));
+        canvas.addEventListener('lostpointercapture', (event) => this.onPointerUp(event));
+    }
+
+    /** Rebuild the projection whenever renderer.ts changes the drawing size. */
+    resizeProjection(): void {
+        this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
     }
 
     private onKeyEvent(event: KeyboardEvent, down: boolean) {
@@ -129,9 +142,51 @@ export class Camera {
         this.cameraUp = vec3.normalize(vec3.cross(this.cameraRight, this.cameraFront));
     }
 
-    private onMouseMove(event: MouseEvent) {
+    private onPointerDown(event: PointerEvent): void {
+        if (event.pointerType === 'mouse') {
+            if (event.button === 0) {
+                canvas.requestPointerLock();
+            }
+            return;
+        }
+
+        if (event.pointerType !== 'touch' || this.activeTouchPointerId !== undefined) {
+            return;
+        }
+
+        this.activeTouchPointerId = event.pointerId;
+        this.lastTouchX = event.clientX;
+        this.lastTouchY = event.clientY;
+        canvas.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }
+
+    private onPointerMove(event: PointerEvent): void {
+        if (event.pointerType === 'touch' && event.pointerId === this.activeTouchPointerId) {
+            const dx = event.clientX - this.lastTouchX;
+            const dy = event.clientY - this.lastTouchY;
+            this.lastTouchX = event.clientX;
+            this.lastTouchY = event.clientY;
+            this.rotateCamera(dx * this.sensitivity, dy * this.sensitivity);
+            event.preventDefault();
+            return;
+        }
+
         if (document.pointerLockElement === canvas) {
             this.rotateCamera(event.movementX * this.sensitivity, event.movementY * this.sensitivity);
+        }
+    }
+
+    private onPointerUp(event: PointerEvent): void {
+        if (event.pointerType === 'mouse') {
+            if (event.button === 0 && document.pointerLockElement === canvas) {
+                document.exitPointerLock();
+            }
+            return;
+        }
+
+        if (event.pointerId === this.activeTouchPointerId) {
+            this.activeTouchPointerId = undefined;
         }
     }
 
