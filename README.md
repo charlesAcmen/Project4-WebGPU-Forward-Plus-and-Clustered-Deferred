@@ -11,6 +11,35 @@ WebGL Forward+ and Clustered Deferred Shading
 
 [![](img/thumb.png)](http://TODO.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
 
+### Run locally (Windows / PowerShell)
+
+Install dependencies once:
+
+```powershell
+npm install
+```
+
+Development mode: starts Vite's development server with unrestricted lighting
+controls for renderer debugging and stress tests.
+
+```powershell
+npm run dev
+```
+
+Release mode: creates the same production bundle used by GitHub Pages and
+copies the Sponza assets into `dist/`. Release enables the device-aware light
+and pixel-ratio safeguards.
+
+```powershell
+npm run build
+```
+
+Preview that generated release build locally:
+
+```powershell
+npx vite preview --host 0.0.0.0
+```
+
 ### Demo Video/GIF
 
 [![](img/video.mp4)](TODO)
