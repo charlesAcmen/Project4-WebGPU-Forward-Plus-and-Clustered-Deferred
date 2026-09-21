@@ -231,6 +231,26 @@ export class Lights {
         device.queue.writeBuffer(this.lightSetStorageBuffer, LightSetGpuLayout.numLightsOffset, this.lightSetHeader);
     }
 
+    /**
+     * Resize creates new cluster storage. Rebind it here so the shared
+     * clustering producer keeps writing to the same buffers that each newly
+     * created render path consumes.
+     */
+    setClusters(clusters: Clusters): void {
+        this.clusters = clusters;
+        this.lightClusteringBindGroup = device.createBindGroup({
+            label: "light clustering bind group",
+            layout: this.lightClusteringBindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: this.camera.uniformsBuffer } },
+                { binding: 1, resource: { buffer: this.lightSetStorageBuffer } },
+                { binding: 2, resource: { buffer: clusters.metadataStorageBuffer } },
+                { binding: 3, resource: { buffer: clusters.lightIndexStorageBuffer } },
+                { binding: 4, resource: { buffer: clusters.overflowStorageBuffer } },
+            ],
+        });
+    }
+
     doLightClustering(encoder: GPUCommandEncoder) {
         // TODO-2: run the light clustering compute pass(es) here
         // implementing clustering here allows for reusing the code in both Forward+ and Clustered Deferred
