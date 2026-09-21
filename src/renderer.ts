@@ -3,6 +3,8 @@ import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
 import { Clusters } from './stage/clusters';
 import { Stage } from './stage/stage';
+import { createRenderBudget } from './stage/render_budget';
+import { PerformanceProfiler } from './performance/profiler';
 
 export var canvas: HTMLCanvasElement;
 export var canvasFormat: GPUTextureFormat;
@@ -21,6 +23,91 @@ export const fovYDegrees = 45;
 
 export var modelBindGroupLayout: GPUBindGroupLayout;
 export var materialBindGroupLayout: GPUBindGroupLayout;
+
+// Resize observers drive the normal path. This only catches browser viewport
+// changes that arrive without a corresponding event, such as delayed mobile
+// rotation notifications.
+const resizeSafetyCheckIntervalMs = 500;
+
+function configureCanvasContext(): void {
+    context.configure({
+        device,
+        format: canvasFormat,
+        //STORAGE_BINDING:compute lighting pass
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.STORAGE_BINDING,
+    });
+}
+
+function drawingBufferSize(): { width: number; height: number } {
+    // The visual viewport can be scaled separately from the layout viewport
+    // by mobile browsers and DevTools device emulation. Use one measured rect
+    // and one scale for both axes: a buffer must always preserve this ratio.
+    const rect = canvas.getBoundingClientRect();
+    const renderBudget = createRenderBudget();
+    const scale = Math.min(window.devicePixelRatio, renderBudget.maxDevicePixelRatio);
+    return {
+        width: Math.max(1, Math.round(rect.width * scale)),
+        height: Math.max(1, Math.round(rect.height * scale)),
+    };
+}
+
+export function canvasNeedsResize(): boolean {
+    const { width, height } = drawingBufferSize();
+    return canvas.width !== width || canvas.height !== height;
+}
+
+/**
+ * Synchronize the WebGPU drawing-buffer dimensions with the CSS presentation
+ * size. CSS can change independently on mobile when the device rotates or the
+ * browser chrome expands, so `canvas.width` must not remain at its startup
+ * portrait dimensions.
+ */
+export function resizeCanvasToDisplaySize(): boolean {
+    const { width, height } = drawingBufferSize();
+
+    //this is not duplicated with canvasNeedsResize()
+    //resizeSafetyCheck is called every resizeSafetyCheckIntervalMs for late or missing resize events
+    //so if the size did not change,just skip reconfiguring the canvas context etc stuffs.
+    if (canvas.width === width && canvas.height === height) {
+        return false;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    aspectRatio = width / height;
+    configureCanvasContext();
+    return true;
+}
+
+export function showWebGpuStatusOverlay(titleText: string, reason: string): void {
+    canvas.style.visibility = 'hidden';
+
+    const overlay = document.getElementById('webgpu-status-overlay') ?? document.createElement('section');
+    overlay.id = 'webgpu-status-overlay';
+    overlay.className = 'webgpu-unsupported-overlay';
+    overlay.setAttribute('role', 'alert');
+
+    const panel = document.createElement('div');
+    panel.className = 'webgpu-unsupported-panel';
+
+    const title = document.createElement('h1');
+    title.textContent = titleText;
+    const detail = document.createElement('p');
+    detail.textContent = reason;
+    const suggestion = document.createElement('p');
+    suggestion.textContent = '请使用最新版 Chrome，并开启硬件加速后重试。';
+
+    panel.append(title, detail, suggestion);
+    overlay.replaceChildren(panel);
+    if (!overlay.isConnected) {
+        document.body.appendChild(overlay);
+    }
+}
+
+function failWebGpuInitialization(reason: string): never {
+    showWebGpuStatusOverlay('此设备暂不支持 WebGPU', reason);
+    throw new Error(reason);
+}
 
 // CHECKITOUT: this function initializes WebGPU and also creates some bind group layouts shared by all the renderers
 export async function initWebGPU() {
