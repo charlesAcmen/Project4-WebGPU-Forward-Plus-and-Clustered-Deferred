@@ -250,6 +250,9 @@ export abstract class Renderer {
 
     protected stats: Stats;
 
+    private profiler: PerformanceProfiler | undefined;
+    private profileMode = '';
+
     private prevTime: number = 0;
     private frameRequestId: number;
     private lastResizeSafetyCheckTime = Number.NEGATIVE_INFINITY;
@@ -266,6 +269,21 @@ export abstract class Renderer {
 
     stop(): void {
         cancelAnimationFrame(this.frameRequestId);
+    }
+
+    attachProfiler(profiler: PerformanceProfiler, mode: string): void {
+        this.profiler = profiler;
+        this.profileMode = mode;
+    }
+
+    protected beginGpuFrame(): GpuFrameRecorder | undefined {
+        return this.profiler?.beginGpuFrame();
+    }
+
+    protected submitFrame(encoder: GPUCommandEncoder, gpuFrame?: GpuFrameRecorder): void {
+        gpuFrame?.resolve(encoder);
+        device.queue.submit([encoder.finish()]);
+        gpuFrame?.submitted();
     }
 
     protected abstract draw(): void;
@@ -289,12 +307,29 @@ export abstract class Renderer {
         }
 
         let deltaTime = time - this.prevTime;
+        const profileThisFrame = this.profiler?.beginFrame(
+            time, this.profileMode, this.clusters.capacityStrategy,
+            this.lights.numLights, canvas.width, canvas.height,
+        ) ?? false;
+        const updateStartMs = profileThisFrame ? performance.now() : 0;
         this.camera.onFrame(deltaTime);
-        this.lights.onFrame(time);
+        this.lights.onFrame(time, deltaTime);
+
+        const updateEndMs = profileThisFrame ? performance.now() : 0;
 
         this.stats.begin();
 
+        // draw() encodes renderer commands and submits them; the GPU runs later.
+        const encodeStartMs = profileThisFrame ? performance.now() : 0;
         this.draw();
+        const encodeEndMs = profileThisFrame ? performance.now() : 0;
+
+        if (profileThisFrame) {
+            this.profiler!.endFrame(
+                encodeEndMs, updateEndMs - updateStartMs, encodeEndMs - encodeStartMs,
+                this.lights.numLights,
+            );
+        }
 
         this.stats.end();
 
