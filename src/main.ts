@@ -130,7 +130,7 @@ const defaultRenderMode = supportsPrimitiveIndex
     // path. Without it, prefer the packed clustered-deferred implementation
     // as the default bandwidth-oriented fallback; Forward+ remains selectable.
     : renderModes.clusteredDeferredOptimized;
-let renderModeController = gui.add({ mode: renderModes.naive }, 'mode', renderModes);
+let renderModeController = gui.add({ mode: defaultRenderMode }, 'mode', renderModes);
 renderModeController.onChange(setRenderer);
 
 setRenderer(renderModeController.getValue());
