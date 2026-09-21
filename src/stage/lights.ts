@@ -13,6 +13,7 @@ import {
     writeLightColor,
     writeLightSetNumLights,
 } from "./gpu_layouts";
+import { RenderBudget, createRenderBudget } from "./render_budget";
 
 // h in [0, 1]
 function hueToRgb(h: number) {
@@ -24,7 +25,8 @@ export class Lights {
     private camera: Camera;
     private clusters: Clusters;
 
-    numLights = 500;
+    numLights: number;
+    readonly maxRuntimeLights: number;
     static readonly maxNumLights = 5000;
     static readonly numFloatsPerLight = LightGpuLayout.float32sPerLight; // vec3f is aligned at 16 byte boundaries
 
@@ -52,6 +54,9 @@ export class Lights {
     constructor(camera: Camera, clusters: Clusters) {
         this.camera = camera;
         this.clusters = clusters;
+        this.renderBudget = renderBudget;
+        this.numLights = renderBudget.initialLightCount;
+        this.maxRuntimeLights = renderBudget.maxLightCount;
 
         this.lightSetStorageBuffer = device.createBuffer({
             label: "lights",
