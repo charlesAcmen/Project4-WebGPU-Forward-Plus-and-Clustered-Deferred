@@ -4,6 +4,8 @@ import {
     createClusterMetadata,
     createClusterOverflowFlags,
     createLightIndexList,
+    ClusterMetadataGpuLayout,
+    ClusterOverflowGpuLayout,
     writeClusterMetadata,
 } from "./gpu_layouts";
 
@@ -73,7 +75,7 @@ export class Clusters {
         this.metadataStorageBuffer = device.createBuffer({
             label: "cluster metadata",
             size: metadata.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
         });
         this.lightIndexStorageBuffer = device.createBuffer({
             label: "cluster light indices",
@@ -83,7 +85,7 @@ export class Clusters {
         this.overflowStorageBuffer = device.createBuffer({
             label: "cluster overflow flags",
             size: overflowFlags.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
         });
 
         device.queue.writeBuffer(this.metadataStorageBuffer, 0, metadata);
@@ -100,6 +102,50 @@ export class Clusters {
             // Adaptive prefixing overwrites offsets and capacities every frame.
             // Restore fixed-stride metadata before returning to the baseline path.
             device.queue.writeBuffer(this.metadataStorageBuffer, 0, this.fixedMetadata);
+        }
+    }
+
+    //prevent multiple readbacks(like clicked twice and more) in flight, 
+    //which would be a waste of bandwidth and could cause race conditions
+    private diagnosticReadPending = false;
+
+    /** One opt-in readback, outside the per-frame timing path. */
+    async readDiagnosticBuffers(): Promise<{ metadata: Uint32Array; overflow: Uint32Array }> {
+        if (this.diagnosticReadPending) {
+            throw new Error('Cluster diagnostic readback is already pending.');
+        }
+        this.diagnosticReadPending = true;
+        const metadataBytes = this.dimensions.clusterCount * ClusterMetadataGpuLayout.byteStride;
+        const overflowBytes = this.dimensions.clusterCount * ClusterOverflowGpuLayout.byteStride;
+        //CPU-readback buffers
+        const metadataRead = device.createBuffer({
+            size: metadataBytes,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        const overflowRead = device.createBuffer({
+            size: overflowBytes,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        try {
+            const encoder = device.createCommandEncoder({ label: 'Cluster diagnostic copy' });
+            //resolve
+            encoder.copyBufferToBuffer(this.metadataStorageBuffer, 0, metadataRead, 0, metadataBytes);
+            encoder.copyBufferToBuffer(this.overflowStorageBuffer, 0, overflowRead, 0, overflowBytes);
+            device.queue.submit([encoder.finish()]);
+            await Promise.all([
+                metadataRead.mapAsync(GPUMapMode.READ),
+                overflowRead.mapAsync(GPUMapMode.READ),
+            ]);
+            return {
+                metadata: new Uint32Array(metadataRead.getMappedRange().slice(0)),
+                overflow: new Uint32Array(overflowRead.getMappedRange().slice(0)),
+            };
+        } finally {
+            if (metadataRead.mapState === 'mapped') metadataRead.unmap();
+            if (overflowRead.mapState === 'mapped') overflowRead.unmap();
+            metadataRead.destroy();
+            overflowRead.destroy();
+            this.diagnosticReadPending = false;
         }
     }
 
