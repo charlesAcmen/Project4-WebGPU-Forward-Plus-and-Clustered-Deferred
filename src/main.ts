@@ -72,6 +72,7 @@ gui.add(visibilityDebugState, 'view', visibilityDebugViews).name('visibility deb
 });
 
 const stage = new Stage(scene, lights, camera, clusters, stats);
+const profiler = new PerformanceProfiler();
 
 var renderer: Renderer | undefined;
 let activeRenderMode = '';
@@ -108,6 +109,8 @@ function setRenderer(mode: string) {
             break;
     }
 
+    profiler.setMode(mode);
+    renderer?.attachProfiler(profiler, mode);
     activeRenderMode = mode;
 }
 
