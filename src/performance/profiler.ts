@@ -6,6 +6,7 @@ import { ClusterMetadataGpuLayout } from '../stage/gpu_layouts';
 //click the cluster snap shot button,and takes a screen shot lol
 export interface ClusterDiagnosticSnapshot {
     strategy: 'fixed' | 'adaptive';
+    sampleCount: number;
     activeClusters: number;
     totalClusters: number;
     acceptedMean: number;
