@@ -70,6 +70,15 @@ export class PerformanceProfiler {
     private pendingFrameIntervalMs: number | undefined;
     private firstValidFrameTimeMs: number | undefined;
     private warmupFramesRemaining = 30;
+    private sampleObserver: ProfileSampleObserver | undefined;
+
+    setSampleObserver(observer: ProfileSampleObserver | undefined): void {
+        this.sampleObserver = observer;
+    }
+
+    get hasGpuTiming(): boolean {
+        return this.gpuTimer !== undefined;
+    }
 
     enableGpuTiming(device: GPUDevice): void {
         if (device.features.has('timestamp-query')) {
@@ -176,6 +185,10 @@ export class PerformanceProfiler {
         this.frameInterval.addSample(timeMs, intervalMs);
         this.cpuUpdate.addSample(timeMs, cpuUpdateMs);
         this.cpuEncodeSubmit.addSample(timeMs, cpuEncodeSubmitMs);
+        this.sampleObserver?.onCpuSample({
+            epoch: this.frameInterval.currentEpoch, frameId: this.frameId, timeMs,
+            frameIntervalMs: intervalMs, cpuUpdateMs, cpuEncodeSubmitMs,
+        });
     }
 
     snapshot(timeMs: number, includeGpuPasses = false): CpuFrameSnapshot {
@@ -274,6 +287,7 @@ export class PerformanceProfiler {
             }
             window.addSample(arrivalTimeMs, durationMs);
         }
+        this.sampleObserver?.onGpuSample(sample);
     }
 
     private reset(): void {
