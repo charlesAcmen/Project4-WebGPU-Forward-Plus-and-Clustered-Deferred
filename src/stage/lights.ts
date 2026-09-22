@@ -308,7 +308,7 @@ export class Lights {
 
     // CHECKITOUT: this is where the light movement compute shader is dispatched from the host
     onFrame(time: number, frameTimeMs: number) {
-        this.applyReleaseFrameBudget(time, frameTimeMs);
+        this.applyAdaptiveLightBudget(time, frameTimeMs);
         device.queue.writeBuffer(this.timeUniformBuffer, 0, new Float32Array([time]));
 
         // not using same encoder as render pass so this doesn't interfere with measuring actual rendering performance
@@ -327,8 +327,14 @@ export class Lights {
         device.queue.submit([encoder.finish()]);
     }
 
-    private applyReleaseFrameBudget(time: number, frameTimeMs: number): void {
-        if (!this.renderBudget.enforced || !Number.isFinite(frameTimeMs) || frameTimeMs <= 0) {
+    /** A timed batch must keep its user-selected light count invariant. */
+    setFrameBudgetPaused(paused: boolean): void {
+        this.frameBudgetPaused = paused;
+        if (paused) this.overloadFrames = 0;
+    }
+
+    private applyAdaptiveLightBudget(time: number, frameTimeMs: number): void {
+        if (this.frameBudgetPaused || !this.renderBudget.enforced || !Number.isFinite(frameTimeMs) || frameTimeMs <= 0) {
             return;
         }
 
