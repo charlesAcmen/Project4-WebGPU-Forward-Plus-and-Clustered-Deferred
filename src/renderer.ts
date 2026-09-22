@@ -148,6 +148,9 @@ export async function initWebGPU() {
     // running on an adapter that does not. The visibility renderer itself
     // performs the corresponding user-facing availability check.
     supportsPrimitiveIndex = adapter.features.has("primitive-index");
+    // Do not make instrumentation an implicit mobile startup dependency.
+    // Mali devices can render without timestamp readback, so reserve the
+    // optional feature for the desktop profiling configuration.
     supportsTimestampQuery = adapter.features.has('timestamp-query');
     try {
         device = await adapter.requestDevice({
