@@ -46,7 +46,7 @@ export class PerformanceOverlay {
         this.details.open = true;
         this.diagnosticEpoch = this.profiler.snapshot(performance.now()).epoch;
         this.diagnosticText = [
-            `Cluster snapshot (${snapshot.strategy}):`,
+            `Cluster snapshots (${snapshot.strategy}, ${snapshot.sampleCount} samples):`,
             `  active / total: ${snapshot.activeClusters} / ${snapshot.totalClusters}`,
             `  accepted lights (active): mean ${snapshot.acceptedMean.toFixed(1)}, median ${snapshot.acceptedMedian.toFixed(1)}, p95 ${snapshot.acceptedP95}, max ${snapshot.acceptedMax}`,
             `  max candidate: ${snapshot.candidateMax}`,
