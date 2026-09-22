@@ -91,6 +91,15 @@ export class Camera {
     private activeTouchPointerId: number | undefined;
     private lastTouchX = 0;
     private lastTouchY = 0;
+    private inputLocked = false;
+
+    setInputLocked(locked: boolean): void {
+        this.inputLocked = locked;
+        if (locked) {
+            this.keys = {};
+            if (document.pointerLockElement === canvas) void document.exitPointerLock();
+        }
+    }
 
     constructor () {
         // TODO-1.1: set `this.uniformsBuffer` to a new buffer of size `this.uniforms.buffer.byteLength`
@@ -135,6 +144,7 @@ export class Camera {
     }
 
     private onKeyEvent(event: KeyboardEvent, down: boolean) {
+        if (this.inputLocked) return;
         this.keys[event.key.toLowerCase()] = down;
         if (this.keys['alt']) { // prevent issues from alt shortcuts
             event.preventDefault();
@@ -163,6 +173,7 @@ export class Camera {
     }
 
     private onPointerDown(event: PointerEvent): void {
+        if (this.inputLocked) return;
         if (event.pointerType === 'mouse') {
             if (event.button === 0) {
                 canvas.requestPointerLock();
@@ -182,6 +193,7 @@ export class Camera {
     }
 
     private onPointerMove(event: PointerEvent): void {
+        if (this.inputLocked) return;
         if (event.pointerType === 'touch' && event.pointerId === this.activeTouchPointerId) {
             const dx = event.clientX - this.lastTouchX;
             const dy = event.clientY - this.lastTouchY;
