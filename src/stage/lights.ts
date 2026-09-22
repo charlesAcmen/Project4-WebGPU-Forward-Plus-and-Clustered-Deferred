@@ -53,6 +53,7 @@ export class Lights {
     private smoothedFrameTimeMs = 0;
     private overloadFrames = 0;
     private lastBudgetReductionTime = Number.NEGATIVE_INFINITY;
+    private frameBudgetPaused = false;
 
     // TODO-2: add layouts, pipelines, textures, etc. needed for light clustering here
 
