@@ -1,0 +1,2 @@
+# Optional plotting dependency for scripts/analyze_performance.py.
+matplotlib>=3.8,<4
