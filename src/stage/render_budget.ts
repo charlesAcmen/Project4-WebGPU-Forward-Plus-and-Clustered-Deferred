@@ -34,7 +34,7 @@ export function createRenderBudget(): RenderBudget {
         // cannot leave the development tab unresponsive indefinitely.
         return {
             enforced: true,
-            initialLightCount: 500,
+            initialLightCount: 750,
             maxLightCount: 5000,
             minimumLightCount: 1,
             targetFrameTimeMs: 45,
@@ -64,7 +64,7 @@ export function createRenderBudget(): RenderBudget {
     //roughly for pc
     return {
         enforced: true,
-        initialLightCount: 500,
+        initialLightCount: 750,
         maxLightCount: 1500,
         minimumLightCount: 64,
         targetFrameTimeMs: 45,
