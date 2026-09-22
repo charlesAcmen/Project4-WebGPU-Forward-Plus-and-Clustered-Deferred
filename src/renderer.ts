@@ -151,7 +151,8 @@ export async function initWebGPU() {
     // Do not make instrumentation an implicit mobile startup dependency.
     // Mali devices can render without timestamp readback, so reserve the
     // optional feature for the desktop profiling configuration.
-    supportsTimestampQuery = adapter.features.has('timestamp-query');
+    supportsTimestampQuery = createRenderBudget().enableGpuTimestampProfiling
+        && adapter.features.has('timestamp-query');
     try {
         device = await adapter.requestDevice({
             requiredFeatures: [
