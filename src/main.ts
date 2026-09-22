@@ -207,7 +207,12 @@ window.addEventListener('webgpu-canvas-resize-needed', scheduleRendererResize);
 
 // The governor can lower numLights asynchronously after sustained
 // overload. Refreshing this controller keeps the displayed value truthful.
-window.setInterval(() => lightCountController.updateDisplay(), 250);
+window.setInterval(() => {
+    // The release safety valve can update the displayed count, but it must not
+    // overwrite a number while the user is selecting, pasting, or backspacing.
+    const lightInput = lightCountController.domElement.querySelector('input');
+    if (document.activeElement !== lightInput) lightCountController.updateDisplay();
+}, 250);
 })().catch((error: unknown) => {
     const reason = error instanceof Error ? error.message : String(error);
     // initWebGPU already provides the more specific unsupported-device title.
