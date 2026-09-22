@@ -20,7 +20,7 @@ export interface RenderBudget {
     readonly isTouchClassDevice: boolean;
 }
 
-function isTouchClassDevice(): boolean {
+export function isTouchClassDevice(): boolean {
     //pointer is thick and/or has touch points
     //laptop with touch screen is considered touch-class device
     return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
