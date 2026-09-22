@@ -251,6 +251,7 @@ export class PerformanceProfiler {
             const count = acceptedActive.length;
             return {
                 strategy: clusters.capacityStrategy,
+                sampleCount: 1,
                 activeClusters: count,
                 totalClusters: clusters.dimensions.clusterCount,
                 acceptedMean: count === 0 ? 0 : acceptedSum / count,
