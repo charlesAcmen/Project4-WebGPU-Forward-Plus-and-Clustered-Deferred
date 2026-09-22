@@ -14,6 +14,10 @@ export interface RenderBudget {
     readonly targetFrameTimeMs: number;
     //GPU rendering reso=maxDevicePixelRatio * canvas CSS size
     readonly maxDevicePixelRatio: number;
+    // Timestamp resolve/readback is useful during desktop profiling, but is
+    // optional instrumentation rather than a requirement to present a frame.
+    readonly enableGpuTimestampProfiling: boolean;
+    readonly isTouchClassDevice: boolean;
 }
 
 function isTouchClassDevice(): boolean {
@@ -23,6 +27,7 @@ function isTouchClassDevice(): boolean {
 }
 
 export function createRenderBudget(): RenderBudget {
+    const touchClassDevice = isTouchClassDevice();
     if (import.meta.env.DEV) {
         // Keep the 5000-light stress range, but retain the same overload
         // safety valve as release builds so an accidental extreme setting
@@ -34,11 +39,13 @@ export function createRenderBudget(): RenderBudget {
             minimumLightCount: 1,
             targetFrameTimeMs: 45,
             maxDevicePixelRatio: Number.POSITIVE_INFINITY,
+            enableGpuTimestampProfiling: !touchClassDevice,
+            isTouchClassDevice: touchClassDevice,
         };
     }
 
     //for mobile and tablet
-    if (isTouchClassDevice()) {
+    if (touchClassDevice) {
         return {
             enforced: true,
             initialLightCount: 128,
@@ -47,6 +54,10 @@ export function createRenderBudget(): RenderBudget {
             targetFrameTimeMs: 45,
             // Full phone DPR can multiply both visibility-buffer and compute work.
             maxDevicePixelRatio: 1.25,
+            // Mobile release should first prove that the renderer is stable.
+            // GPU timestamps remain manually available on desktop profiling.
+            enableGpuTimestampProfiling: false,
+            isTouchClassDevice: true,
         };
     }
 
@@ -58,5 +69,7 @@ export function createRenderBudget(): RenderBudget {
         minimumLightCount: 64,
         targetFrameTimeMs: 45,
         maxDevicePixelRatio: 2,
+        enableGpuTimestampProfiling: true,
+        isTouchClassDevice: false,
     };
 }
