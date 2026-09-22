@@ -33,6 +33,20 @@ export interface CpuFrameSnapshot {
     droppedGpuSamples: number;
 }
 
+export interface CpuFrameSample {
+    epoch: number;
+    frameId: number;
+    timeMs: number;
+    frameIntervalMs: number;
+    cpuUpdateMs: number;
+    cpuEncodeSubmitMs: number;
+}
+
+export interface ProfileSampleObserver {
+    onCpuSample(sample: CpuFrameSample): void;
+    onGpuSample(sample: GpuTimingSample): void;
+}
+
 /** CPU-only samples; none of these durations measure GPU execution or display. */
 export class PerformanceProfiler {
     private readonly frameInterval = new RollingStatsWindow();
