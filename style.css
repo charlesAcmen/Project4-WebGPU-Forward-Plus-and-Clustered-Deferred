@@ -46,6 +46,15 @@ html, body {
     line-height: var(--overlay-row-height);
 }
 
+/* dat.GUI collapses folders by setting height: 0. The larger control rows
+   above use min-height, so explicitly release it for a closed subfolder. */
+.renderer-controls.dg ul.closed li:not(.title),
+.renderer-controls.dg ul.closed li:not(.title) .property-name,
+.renderer-controls.dg ul.closed li:not(.title) .c {
+    min-height: 0 !important;
+    line-height: 0 !important;
+}
+
 .renderer-controls.dg select,
 .renderer-controls.dg input {
     min-height: calc(var(--overlay-row-height) - 4px);
@@ -53,10 +62,41 @@ html, body {
     touch-action: manipulation;
 }
 
-.renderer-controls.dg .close-button {
-    height: var(--overlay-row-height);
-    line-height: var(--overlay-row-height);
-    font-size: var(--overlay-font-size);
+/* Keep only dat.GUI's root open/close strip hidden. Folder title rows, such
+   as profiling queue, must retain their built-in collapse interaction. */
+.renderer-controls.dg > .close-button {
+    display: none;
+}
+
+/* dat.GUI's colored type bars describe its own widgets, not renderer state. */
+.renderer-controls.dg .cr {
+    border-left: 0 !important;
+}
+
+.renderer-controls.dg .benchmark-status {
+    box-sizing: border-box;
+    max-height: calc(var(--overlay-row-height) * 3);
+    margin: 0;
+    padding: 7px 9px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    color: #e7edf8;
+    background: #171c26;
+    border-top: 1px solid #3a4457;
+    font: 12px/1.35 system-ui, sans-serif;
+}
+
+.renderer-controls.dg .benchmark-status[hidden] {
+    display: none;
+}
+
+.renderer-controls.dg .benchmark-status[data-state='success'] {
+    color: #bff4d3;
+}
+
+.renderer-controls.dg .benchmark-status[data-state='error'] {
+    color: #ffd0d0;
+    border-top-color: #804343;
 }
 
 .performance-overlay {
