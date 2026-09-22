@@ -364,7 +364,7 @@ export class Lights {
             this.updateLightSetUniformNumLights();
             this.lastBudgetReductionTime = time;
             this.overloadFrames = 0;
-            console.warn(`Release frame budget reduced lights to ${nextCount}.`);
+            console.warn(`Adaptive light budget reduced lights to ${nextCount}.`);
         }
     }
 }
